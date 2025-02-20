@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4ecec;
+            color: #780c4a;
+        }
+        header {
+            background-color: #8a0e56;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 280px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .card h2 {
+            color: #780c4a;
+            font-family: 'Poppins', sans-serif;
+            margin-bottom: 10px;
+        }
+        .card p {
+            color: #8a0e56;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+        .button {
+            background-color: #f493cb;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #e7178f;
+        }
+        .icon {
+            font-size: 40px;
+            color: #8a0e56;
+            margin-bottom: 15px;
+        }
+        footer {
+            background-color: #8a0e56;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Punto de Venta</h1>
+    <p>Gestiona ventas, productos y comandas</p>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="icon"><i class="fas fa-plus-circle"></i></div>
+        <h2>Nuevo Pedido</h2>
+        <p>Crea un nuevo pedido para los clientes.</p>
+        <button class="button" onclick="nuevoPedido()">Crear Pedido</button>
+    </div>
+    <div class="card">
+        <div class="icon"><i class="fas fa-utensils"></i></div>
+        <h2>Consultar Productos</h2>
+        <p>Revisa la lista de productos disponibles.</p>
+        <button class="button" onclick="consultarProductos()">Ver Productos</button>
+    </div>
+    <div class="card">
+        <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+        <h2>Generar Comanda</h2>
+        <p>Genera una comanda para la cocina.</p>
+        <button class="button" onclick="generarComanda()">Generar Comanda</button>
+    </div>
+    <div class="card">
+        <div class="icon"><i class="fas fa-cash-register"></i></div>
+        <h2>Cobrar Pedido</h2>
+        <p>Realiza el cobro de un pedido.</p>
+        <button class="button" onclick="cobrarPedido()">Cobrar</button>
+    </div>
+</div>
+
+<script>
+    function nuevoPedido() {
+        alert("Creando un nuevo pedido...");
+    }
+
+    function consultarProductos() {
+        alert("Mostrando lista de productos...");
+    }
+
+    function generarComanda() {
+        alert("Generando comanda para la cocina...");
+    }
+
+    function cobrarPedido() {
+        alert("Realizando cobro del pedido...");
+    }
+</script>
+
+</body>
+</html>
