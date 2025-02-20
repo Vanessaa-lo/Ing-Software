@@ -86,57 +86,226 @@
             font-family: 'Poppins', sans-serif;
             box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
         }
+        .view {
+            display: none;
+            padding: 20px;
+        }
+        .view h2 {
+            color: #780c4a;
+            font-family: 'Poppins', sans-serif;
+        }
+        .view table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .view table, .view th, .view td {
+            border: 1px solid #8a0e56;
+        }
+        .view th, .view td {
+            padding: 10px;
+            text-align: left;
+        }
+        .view th {
+            background-color: #f493cb;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Punto de Venta</h1>
-    <p>Gestiona ventas, productos y comandas</p>
+    <p>Gestiona ventas, productos, inventario y más</p>
 </header>
 
 <div class="container">
-    <div class="card">
-        <div class="icon"><i class="fas fa-plus-circle"></i></div>
-        <h2>Nuevo Pedido</h2>
-        <p>Crea un nuevo pedido para los clientes.</p>
-        <button class="button" onclick="nuevoPedido()">Crear Pedido</button>
-    </div>
-    <div class="card">
-        <div class="icon"><i class="fas fa-utensils"></i></div>
-        <h2>Consultar Productos</h2>
-        <p>Revisa la lista de productos disponibles.</p>
-        <button class="button" onclick="consultarProductos()">Ver Productos</button>
-    </div>
-    <div class="card">
-        <div class="icon"><i class="fas fa-clipboard-list"></i></div>
-        <h2>Generar Comanda</h2>
-        <p>Genera una comanda para la cocina.</p>
-        <button class="button" onclick="generarComanda()">Generar Comanda</button>
-    </div>
+    <!-- Corte de Caja -->
     <div class="card">
         <div class="icon"><i class="fas fa-cash-register"></i></div>
-        <h2>Cobrar Pedido</h2>
-        <p>Realiza el cobro de un pedido.</p>
-        <button class="button" onclick="cobrarPedido()">Cobrar</button>
+        <h2>Corte de Caja</h2>
+        <p>Realiza el corte de caja y genera reportes de ventas.</p>
+        <button class="button" onclick="showView('corteCaja')">Corte de Caja</button>
+    </div>
+
+    <!-- Reporte de Productos -->
+    <div class="card">
+        <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+        <h2>Reporte de Productos</h2>
+        <p>Muestra el estado y detalles de los productos.</p>
+        <button class="button" onclick="showView('reporteProductos')">Ver Reporte</button>
+    </div>
+
+    <!-- Entradas y Salidas -->
+    <div class="card">
+        <div class="icon"><i class="fas fa-exchange-alt"></i></div>
+        <h2>Entradas y Salidas</h2>
+        <p>Registra entradas y salidas de productos.</p>
+        <button class="button" onclick="showView('entradasSalidas')">Gestionar</button>
+    </div>
+
+    <!-- Control de Ventas -->
+    <div class="card">
+        <div class="icon"><i class="fas fa-chart-line"></i></div>
+        <h2>Control de Ventas</h2>
+        <p>Gestiona y revisa los detalles de las ventas.</p>
+        <button class="button" onclick="showView('controlVentas')">Ver Ventas</button>
+    </div>
+
+    <!-- Inventario -->
+    <div class="card">
+        <div class="icon"><i class="fas fa-boxes"></i></div>
+        <h2>Inventario</h2>
+        <p>Gestiona el inventario de productos.</p>
+        <button class="button" onclick="showView('inventario')">Ver Inventario</button>
     </div>
 </div>
 
+<!-- Vistas Detalladas -->
+<div id="corteCaja" class="view">
+    <h2>Corte de Caja</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Total Ventas</th>
+                <th>Total Efectivo</th>
+                <th>Total Tarjeta</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>2023-10-01</td>
+                <td>$5,000.00</td>
+                <td>$3,000.00</td>
+                <td>$2,000.00</td>
+            </tr>
+            <!-- Más filas aquí -->
+        </tbody>
+    </table>
+</div>
+
+<div id="reporteProductos" class="view">
+    <h2>Reporte de Productos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>cebollas</td>
+                <td>50</td>
+                <td>Disponible</td>
+            </tr>
+            <tr>
+                <td>jitomates</td>
+                <td>30</td>
+                <td>Disponible</td>
+            </tr>
+            <!-- Más filas aquí -->
+        </tbody>
+    </table>
+</div>
+
+<div id="entradasSalidas" class="view">
+    <h2>Entradas y Salidas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Autorizado Por</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>2023-10-01</td>
+                <td>Entrada</td>
+                <td>cebollas</td>
+                <td>20</td>
+                <td>Ana</td>
+            </tr>
+            <tr>
+                <td>2023-10-01</td>
+                <td>Salida</td>
+                <td>jitomates</td>
+                <td>10</td>
+                <td>María López</td>
+            </tr>
+            <!-- Más filas aquí -->
+        </tbody>
+    </table>
+</div>
+
+<div id="controlVentas" class="view">
+    <h2>Control de Ventas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>2023-10-01</td>
+                <td>Enchiladas Verdes</td>
+                <td>5</td>
+                <td>$600.00</td>
+            </tr>
+            <tr>
+                <td>2023-10-01</td>
+                <td>Pasta Alfredo</td>
+                <td>3</td>
+                <td>$450.00</td>
+            </tr>
+            <!-- Más filas aquí -->
+        </tbody>
+    </table>
+</div>
+
+<div id="inventario" class="view">
+    <h2>Inventario</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Última Actualización</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>cebollas</td>
+                <td>50</td>
+                <td>2023-10-01</td>
+            </tr>
+            <tr>
+                <td>jitomates</td>
+                <td>30</td>
+                <td>2023-10-01</td>
+            </tr>
+            <!-- Más filas aquí -->
+        </tbody>
+    </table>
+</div>
 <script>
-    function nuevoPedido() {
-        alert("Creando un nuevo pedido...");
-    }
-
-    function consultarProductos() {
-        alert("Mostrando lista de productos...");
-    }
-
-    function generarComanda() {
-        alert("Generando comanda para la cocina...");
-    }
-
-    function cobrarPedido() {
-        alert("Realizando cobro del pedido...");
+    // Función para mostrar la vista seleccionada
+    function showView(viewId) {
+        // Oculta todas las vistas
+        document.querySelectorAll('.view').forEach(view => {
+            view.style.display = 'none';
+        });
+        // Muestra la vista seleccionada
+        document.getElementById(viewId).style.display = 'block';
     }
 </script>
 
