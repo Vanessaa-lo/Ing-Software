@@ -1,25 +1,271 @@
+<!DOCTYPE html>
 <html lang="es">
-    <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modulo Meseros</title>
-    <link rel="stylesheet" href="Mesero.css">
-    </head> 
-    <body>
-        <div class="container">
-            <h1>Modulo Meseros</h1>
-            <section id="comandas">
-                <h2>Comanda</h2>
-                <button>Generar comanda</button>
-                <button>Enviar comanda</button>
-                <button>Editar comanda</button>
-            </section>
+    <title>Módulo Meseros</title>
+    <style>
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background-color: #f5f0e6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-            <section id="pedidos">
-                <h2>Comandas</h2>
-                <button>Generar comanda</button>
-            </section>
-            
-        </div>
-    </body>
+        .container {
+            background-color: #fffaf2;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            color: var(--cafe);
+            margin: 10px 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--cafe);
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d7ccc8;
+            border-radius: 6px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="datetime-local"]:focus {
+            border-color: var(--naranja);
+            outline: none;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--naranja);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--rojo-oscuro);
+            transform: translateY(-2px);
+        }
+
+        #detalle-pedido .item-pedido {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            border: 1px solid #d7ccc8;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: var(--crema);
+        }
+
+        #detalle-pedido .item-pedido label {
+            font-weight: 600;
+            color: var(--cafe);
+            display: block;
+        }
+
+        #detalle-pedido .item-pedido input[type="text"],
+        #detalle-pedido .item-pedido input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d7ccc8;
+            border-radius: 6px;
+        }
+
+        #detalle-pedido .item-pedido button {
+            grid-column: span 2;
+            background-color: var(--rojo-oscuro);
+            color: white;
+        }
+
+        #detalle-pedido .item-pedido button:hover {
+            background-color: #8e0000;
+        }
+
+        #lista-platillos {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #lista-platillos li {
+            background-color: #e0e0e0;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        section {
+            background-color: #f7f2ec;
+            padding: 30px;
+            border-radius: 20px;
+            border-color: #121912;
+            box-shadow: 0 2px 10px rgba(40, 9, 9, 0.762);
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #detalle-pedido .item-pedido {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Paleta de colores adicional */
+        :root {
+            --verde: #388e3c;
+            --amarillo: #fbc12dc3;
+            --naranja: #ff7043;
+            --cafe: #6e4b3a;
+            --crema: #f5f0e6;
+            --rojo-oscuro: #8e0000;
+        }
+
+        .button-group button:nth-child(1) {
+            background-color: var(--verde);
+        }
+
+        .button-group button:nth-child(2) {
+            background-color: var(--amarillo);
+        }
+
+        .button-group button:nth-child(3) {
+            background-color: var(--rojo-oscuro);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Módulo Meseros</h1>
+        <section id="comandas">
+            <h2>Comanda</h2>
+            <form id="comanda-form">
+                <div class="form-grid">
+                    <div>
+                        <label for="comanda-id">Número de Comanda:</label>
+                        <input type="text" id="comanda-id" name="comanda-id" required>
+                    </div>
+
+                    <div>
+                        <label for="fecha-hora">Fecha y Hora:</label>
+                        <input type="datetime-local" id="fecha-hora" name="fecha-hora" required>
+                    </div>
+
+                    <div>
+                        <label for="mesero">Nombre del Mesero:</label>
+                        <input type="text" id="mesero" name="mesero" required>
+                    </div>
+
+                    <div>
+                        <label for="mesa">Número de Mesa:</label>
+                        <input type="number" id="mesa" name="mesa" required>
+                    </div>
+
+                    <div>
+                        <label for="comensales">Número de Comensales:</label>
+                        <input type="number" id="comensales" name="comensales" required>
+                    </div>
+                </div>
+
+                <h3>Detalles del Pedido</h3>
+                <div id="detalle-pedido">
+                    <div class="item-pedido">
+                        <label>Platillo/Bebida:</label>
+                        <input type="text" name="platillo[]" required>
+
+                        <label>Cantidad:</label>
+                        <input type="number" name="cantidad[]" required>
+
+                        <label>Observaciones:</label>
+                        <input type="text" name="observaciones[]">
+
+                        <button type="button">Eliminar</button>
+                    </div>
+                </div>
+                <button type="button">Agregar Platillo/Bebida</button>
+
+                <h3>Platillos/Bebidas Agregados</h3>
+                <ul id="lista-platillos">
+                    <li>No hay platillos agregados aún.</li>
+                </ul>
+
+                <div class="button-group">
+                    <button type="submit">Generar Comanda</button>
+                    <button type="button">Enviar Comanda</button>
+                    <button type="button">Editar Comanda</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="pedidos">
+            <h2>Pedidos</h2>
+            <div class="button-group">
+                <button>Ver Pedidos</button>
+                <button>Actualizar Estado</button>
+            </div>
+        </section>
+
+        <section id="menu">
+            <h2>Menú Digital</h2>
+            <div class="button-group">
+                <button>Ver Menú</button>
+            </div>
+        </section>
+    </div>
+</body>
 </html>
