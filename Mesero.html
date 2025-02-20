@@ -1,116 +1,25 @@
-<!DOCTYPE html>
 <html lang="es">
-<head>
+    <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicación para Meseros</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4ecec;
-            color: #780c4a;
-        }
-        header {
-            background-color: #8a0e56;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-family: 'Poppins', sans-serif;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-        }
-        .card {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 10px;
-            width: 300px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
-        .card h2 {
-            color: #780c4a;
-            font-family: 'Poppins', sans-serif;
-        }
-        .card p {
-            color: #8a0e56;
-            font-family: 'Roboto', sans-serif;
-            font-weight: 300;
-        }
-        .button {
-            background-color: #f493cb;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 10px 0;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-        }
-        .button:hover {
-            background-color: #e7178f;
-        }
-        footer {
-            background-color: #8a0e56;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            font-family: 'Poppins', sans-serif;
-        }
-    </style>
-</head>
-<body>
+    <title>Modulo Meseros</title>
+    <link rel="stylesheet" href="Mesero.css">
+    </head> 
+    <body>
+        <div class="container">
+            <h1>Modulo Meseros</h1>
+            <section id="comandas">
+                <h2>Comanda</h2>
+                <button>Generar comanda</button>
+                <button>Enviar comanda</button>
+                <button>Editar comanda</button>
+            </section>
 
-<header>
-    <h1>Aplicación para Meseros</h1>
-    <p>Gestiona pedidos, comandas y productos del menu</p>
-</header>
-
-<div class="container">
-    <div class="card">
-        <h2>Gestionar Pedidos</h2>
-        <p>Crea y gestiona los pedidos de los clientes.</p>
-        <button class="button" onclick="gestionarPedidos()">Ir a Pedidos</button>
-    </div>
-    <div class="card">
-        <h2>Ver Comandas</h2>
-        <p>Consulta las comandas activas.</p>
-        <button class="button" onclick="verComandas()">Ver Comandas</button>
-    </div>
-    <div class="card">
-        <h2>Consultar Productos</h2>
-        <p>Revisa la lista de productos disponibles.</p>
-        <button class="button" onclick="consultarProductos()">Ver Productos</button>
-    </div>
-</div>
-
-<script>
-    function gestionarPedidos() {
-        alert("Redirigiendo a la gestión de pedidos...");
-    }
-
-    function verComandas() {
-        alert("Mostrando comandas activas...");
-    }
-
-    function consultarProductos() {
-        alert("Mostrando lista de productos...");
-    }
-</script>
-
-</body>
+            <section id="pedidos">
+                <h2>Comandas</h2>
+                <button>Generar comanda</button>
+            </section>
+            
+        </div>
+    </body>
 </html>
