@@ -189,8 +189,6 @@
     </style>
 </head>
 <body>
-
-    
     <div class="container">
         <h1>Módulo Meseros</h1>
         <section id="comandas">
@@ -199,7 +197,7 @@
                 <div class="form-grid">
                     <div>
                         <label for="comanda-id">Número de Comanda:</label>
-                        <input type="text" id="comanda-id" name="comanda-id" required>
+                        <input type="text" id="comanda-id" name="comanda-id" required readonly>
                     </div>
 
                     <div>
@@ -235,28 +233,18 @@
                         <label>Observaciones:</label>
                         <input type="text" name="observaciones[]">
 
-                        <button type="button">Eliminar</button>
+                        <button type="button" class="eliminar">Eliminar</button>
                     </div>
                 </div>
-                <button type="button">Agregar Platillo/Bebida</button>
-
-                <h3>Platillos/Bebidas Agregados</h3>
-                <ul id="lista-platillos">
-                    <li>No hay platillos agregados aún.</li>
-                </ul>
-
-                <div class="button-group">
-                    <button type="submit">Generar Comanda</button>
-                    <button type="button">Enviar Comanda</button>
-                    <button type="button">Editar Comanda</button>
-                </div>
+                <button type="button" id="agregar-platillo">Agregar Platillo/Bebida</button>
+                <button type="submit" id="enviar-comanda">Enviar Comanda</button>
             </form>
         </section>
 
         <section id="pedidos">
             <h2>Pedidos</h2>
             <div class="button-group">
-                <button>Ver Pedidos</button>
+                <button id="editar-comanda">Editar pedido</button>
                 <button>Actualizar Estado</button>
             </div>
         </section>
@@ -268,6 +256,47 @@
             </div>
         </section>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("comanda-id").value = "C" + Math.floor(Math.random() * 10000);
+            document.getElementById("fecha-hora").value = new Date().toISOString().slice(0, 16);
+        });
+
+        document.getElementById("agregar-platillo").addEventListener("click", function () {
+            const detallePedido = document.getElementById("detalle-pedido");
+            const item = document.createElement("div");
+            item.classList.add("item-pedido");
+            item.innerHTML = `
+                <label>Platillo/Bebida:</label>
+                <input type="text" name="platillo[]" required>
+
+                <label>Cantidad:</label>
+                <input type="number" name="cantidad[]" required>
+
+                <label>Observaciones:</label>
+                <input type="text" name="observaciones[]">
+
+                <button type="button" class="eliminar">Eliminar</button>
+            `;
+            detallePedido.appendChild(item);
+            
+            item.querySelector(".eliminar").addEventListener("click", function () {
+                item.remove();
+            });
+        });
+
+        document.getElementById("enviar-comanda").addEventListener("click", function (event) {
+            event.preventDefault();
+            alert("Comanda enviada correctamente.");
+        });
+
+        document.getElementById("editar-comanda").addEventListener("click", function () {
+            alert("Modo edición activado.");
+        });
+    </script>
 </body>
 </html>
+
+
 
