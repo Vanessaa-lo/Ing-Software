@@ -14,7 +14,8 @@ def main(page: ft.Page):
         "nombre_mesero": "Pedro",
         "numero_mesa": "",
         "numero_comensales": "",
-        "platillos": []
+        "platillos": [],
+        "estado": "En preparación"  # Estado inicial de la comanda
     }
 
     comandas_realizadas = []  # Lista para almacenar las comandas realizadas
@@ -27,12 +28,20 @@ def main(page: ft.Page):
 
         if platillo and cantidad:
             comanda_data["platillos"].append({
+                "id": len(comanda_data["platillos"]) + 1,  # Identificador único para cada platillo
                 "platillo": platillo,
                 "cantidad": cantidad,
                 "observaciones": observaciones
             })
             platillos_agregados.controls.append(
-                ft.Text(f"{platillo} - Cantidad: {cantidad} - Observaciones: {observaciones}", color="#F2E8EC")
+                ft.Row(
+                    [
+                        ft.Text(f"{platillo} - Cantidad: {cantidad} - Observaciones: {observaciones}", color="#F2E8EC"),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: editar_platillo(e, idx), icon_color="#4CAF50")
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                )
             )
             platillo_input.value = ""
             cantidad_input.value = ""
@@ -45,8 +54,8 @@ def main(page: ft.Page):
             return  # No generar comanda si no hay platillos
 
         comanda_data["fecha_hora"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        comanda_data["numero_mesa"] = numero_mesa_dropdown.value
-        comanda_data["numero_comensales"] = numero_comensales_dropdown.value
+        comanda_data["numero_mesa"] = int(numero_mesa_dropdown.value)  # Convertir a entero
+        comanda_data["numero_comensales"] = int(numero_comensales_dropdown.value)  # Convertir a entero
 
         # Guardar la comanda realizada
         comandas_realizadas.append(comanda_data.copy())
@@ -54,13 +63,43 @@ def main(page: ft.Page):
         # Incrementar el número de comanda para la próxima
         comanda_data["numero_comanda"] += 1
         comanda_data["platillos"] = []  # Limpiar la lista de platillos
+        comanda_data["estado"] = "En preparación"  # Reiniciar el estado
         platillos_agregados.controls.clear()
+
+        # Actualizar la visualización del número de comanda
+        comanda_numero_text.value = f"Comanda # {comanda_data['numero_comanda']}"
         page.update()
 
     # Función para mostrar las comandas realizadas en el drawer
     def mostrar_comandas_realizadas(e):
         comandas_realizadas_drawer.controls.clear()
         for idx, comanda in enumerate(comandas_realizadas):
+            # Definir el color y el ícono según el estado
+            estado_color = {
+                "En preparación": "#FFC107",  # Amarillo
+                "Listo": "#4CAF50",  # Verde
+                "Entregado": "#2196F3"  # Azul
+            }.get(comanda["estado"], "#F2E8EC")  # Color por defecto
+
+            estado_icono = {
+                "En preparación": ft.icons.ACCESS_TIME,
+                "Listo": ft.icons.CHECK_CIRCLE,
+                "Entregado": ft.icons.LOCAL_SHIPPING
+            }.get(comanda["estado"], ft.icons.INFO)  # Ícono por defecto
+
+            estado_dropdown = ft.Dropdown(
+                value=comanda["estado"],
+                options=[
+                    ft.dropdown.Option("En preparación"),
+                    ft.dropdown.Option("Listo"),
+                    ft.dropdown.Option("Entregado")
+                ],
+                on_change=lambda e, idx=idx: actualizar_estado(e, idx),
+                width=120,
+                color=estado_color,
+                border_color=estado_color,
+                focused_border_color=estado_color
+            )
             comandas_realizadas_drawer.controls.append(
                 ft.Column(
                     [
@@ -69,6 +108,13 @@ def main(page: ft.Page):
                         ft.Text(f"Mesa: {comanda['numero_mesa']} - Comensales: {comanda['numero_comensales']}", color="#F2E8EC"),
                         ft.Text("Platillos/Bebidas:", weight=ft.FontWeight.BOLD, color="#E71790"),
                         *[ft.Text(f"- {platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC") for platillo in comanda['platillos']],
+                        ft.Row(
+                            [
+                                ft.Icon(name=estado_icono, color=estado_color),
+                                estado_dropdown
+                            ],
+                            spacing=10
+                        ),
                         ft.Row(
                             [
                                 ft.ElevatedButton("Borrar", on_click=lambda e, idx=idx: borrar_comanda(e, idx), bgcolor="#FF0000", color="#F2E8EC"),
@@ -82,25 +128,19 @@ def main(page: ft.Page):
             )
         page.update()
 
+    # Función para actualizar el estado de una comanda
+    def actualizar_estado(e, idx):
+        comandas_realizadas[idx]["estado"] = e.control.value
+        mostrar_comandas_realizadas(e)  # Actualizar la lista para reflejar el cambio
+        page.update()
+
     # Función para borrar una comanda
     def borrar_comanda(e, idx):
-        def confirmar_borrado(e):
-            comandas_realizadas.pop(idx)
-            mostrar_comandas_realizadas(e)
-            page.update()
-            page.close_dialog()
-
-        # Mostrar un diálogo de confirmación
-        page.dialog = ft.AlertDialog(
-            title=ft.Text("Confirmar Borrado", color="#F2E8EC"),
-            content=ft.Text("¿Estás seguro de que deseas borrar esta comanda?", color="#F2E8EC"),
-            actions=[
-                ft.ElevatedButton("Sí", on_click=confirmar_borrado, bgcolor="#FF0000", color="#F2E8EC"),
-                ft.ElevatedButton("No", on_click=lambda e: page.close_dialog(), bgcolor="#4CAF50", color="#F2E8EC")
-            ],
-            bgcolor="#5D0E41"
-        )
-        page.dialog.open = True
+        # Eliminar la comanda de la lista
+        del comandas_realizadas[idx]
+        # Actualizar la vista para reflejar el cambio
+        mostrar_comandas_realizadas(e)
+        # Actualizar el número de comanda en la interfaz
         page.update()
 
     # Función para modificar una comanda
@@ -110,17 +150,71 @@ def main(page: ft.Page):
         comanda_data["numero_comanda"] = comanda["numero_comanda"]  # Mantener el número de comanda
 
         # Actualizar los controles con los datos de la comanda
-        numero_mesa_dropdown.value = comanda["numero_mesa"]
-        numero_comensales_dropdown.value = comanda["numero_comensales"]
+        numero_mesa_dropdown.value = str(comanda["numero_mesa"])  # Convertir de entero a string para el dropdown
+        numero_comensales_dropdown.value = str(comanda["numero_comensales"])  # Convertir de entero a string
+
         platillos_agregados.controls.clear()
         for platillo in comanda["platillos"]:
             platillos_agregados.controls.append(
-                ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC")
+                ft.Row(
+                    [
+                        ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, platillo=platillo: eliminar_platillo(e, platillo), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, platillo=platillo: editar_platillo(e, platillo), icon_color="#4CAF50")
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                )
             )
 
         # Eliminar la comanda de la lista de comandas realizadas
         comandas_realizadas.pop(idx)
         page.update()
+
+    # Función para eliminar un platillo de la comanda
+    def eliminar_platillo(e, idx):
+        del comanda_data["platillos"][idx]
+        platillos_agregados.controls.clear()
+        for platillo in comanda_data["platillos"]:
+            platillos_agregados.controls.append(
+                ft.Row(
+                    [
+                        ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: editar_platillo(e, idx), icon_color="#4CAF50")
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                )
+            )
+        page.update()
+
+    # Función para editar un platillo
+    def editar_platillo(e, idx):
+        platillo = comanda_data["platillos"][idx]
+        platillo_input.value = platillo['platillo']
+        cantidad_input.value = platillo['cantidad']
+        observaciones_input.value = platillo['observaciones']
+
+        # Eliminar el platillo para reemplazarlo
+        del comanda_data["platillos"][idx]
+        platillos_agregados.controls.clear()
+        for platillo in comanda_data["platillos"]:
+            platillos_agregados.controls.append(
+                ft.Row(
+                    [
+                        ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, platillo=platillo: eliminar_platillo(e, platillo), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, platillo=platillo: editar_platillo(e, platillo), icon_color="#4CAF50")
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                )
+            )
+        page.update()
+
+    # Validación para los Dropdown
+    def validar_dropdown():
+        if not numero_mesa_dropdown.value or not numero_comensales_dropdown.value:
+            return False
+        return True
 
     # Controles de la interfaz
     numero_mesa_dropdown = ft.Dropdown(
@@ -138,7 +232,13 @@ def main(page: ft.Page):
     )
 
     platillo_input = ft.TextField(label="Platillo/Bebida", width=300, color="#F2E8EC")
-    cantidad_input = ft.TextField(label="Cantidad", width=300, color="#F2E8EC")
+    cantidad_input = ft.TextField(
+        label="Cantidad",
+        width=300,
+        color="#F2E8EC",
+        keyboard_type=ft.KeyboardType.NUMBER  # Muestra teclado numérico en móviles
+    )
+
     observaciones_input = ft.TextField(label="Observaciones", width=300, color="#F2E8EC")
 
     platillos_agregados = ft.Column()
@@ -148,21 +248,18 @@ def main(page: ft.Page):
 
     # Sidebar
     drawer = ft.NavigationDrawer(
-        controls=[
-            ft.Text("Menú", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
-            ft.NavigationDrawerDestination(icon=ft.icons.RESTAURANT, label="Platillos"),
-            ft.NavigationDrawerDestination(icon=ft.icons.LOCAL_DRINK, label="Bebidas"),
-            ft.NavigationDrawerDestination(icon=ft.icons.PAYMENT, label="Pagos"),
-        ],
+        controls=[ft.Text("Menú", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
+                  ft.NavigationDrawerDestination(icon=ft.icons.RESTAURANT, label="Platillos"),
+                  ft.NavigationDrawerDestination(icon=ft.icons.LOCAL_DRINK, label="Bebidas"),
+                  ft.NavigationDrawerDestination(icon=ft.icons.PAYMENT, label="Pagos"),
+                  ],
         bgcolor="#8E2453"
     )
 
     # Drawer para comandas realizadas
     comandas_drawer = ft.NavigationDrawer(
-        controls=[
-            ft.Text("Comandas Realizadas", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
-            comandas_realizadas_drawer
-        ],
+        controls=[ft.Text("Comandas Realizadas", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
+                  comandas_realizadas_drawer],
         bgcolor="#5D0E41"
     )
 
@@ -178,35 +275,34 @@ def main(page: ft.Page):
     # AppBar
     appbar = ft.AppBar(
         title=ft.Text(f"Mesero: {comanda_data['nombre_mesero']}", color="#F2E8EC"),
-        leading=ft.IconButton(ft.icons.MENU, on_click=toggle_sidebar, icon_color="#E71790"),
-        actions=[
-            ft.IconButton(ft.icons.LIST, on_click=toggle_comandas_drawer, icon_color="#E71790")  # Botón para mostrar comandas
-        ],
-        bgcolor="#5D0E41"
+        leading=ft.IconButton(icon=ft.icons.MENU, on_click=toggle_sidebar, icon_color="#E71790"),
+        actions=[ft.IconButton(icon=ft.icons.LIST, on_click=toggle_comandas_drawer, icon_color="#E71790")]  # Botón para mostrar comandas
     )
 
     page.appbar = appbar
     page.drawer = drawer
     page.end_drawer = comandas_drawer
 
+    # Texto para mostrar el número de comanda
+    comanda_numero_text = ft.Text(f"Comanda # {comanda_data['numero_comanda']}", size=20, weight=ft.FontWeight.BOLD, color="#E71790")
+
     page.add(
-        ft.Text(f"Comanda # {comanda_data['numero_comanda']}", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
+        comanda_numero_text,
         numero_mesa_dropdown,
         numero_comensales_dropdown,
         ft.Divider(height=20),
 
-        ft.Text("Detalles del Pedido", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
+        ft.Text("Platillos/Bebidas a Ordenar", size=18, color="#F2E8EC"),
         platillo_input,
         cantidad_input,
         observaciones_input,
-        ft.ElevatedButton("Agregar Platillo/Bebida", on_click=agregar_platillo, bgcolor="#E71790", color="#F2E8EC"),
+        ft.ElevatedButton("Agregar Platillo", on_click=agregar_platillo, bgcolor="#8E2453", color="#F2E8EC"),
         ft.Divider(height=20),
 
-        ft.Text("Platillos/Bebidas Agregados", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
         platillos_agregados,
-        ft.Divider(height=20),
 
-        ft.ElevatedButton("Enviar Comanda", on_click=generar_comanda, bgcolor="#E71790", color="#F2E8EC")
+        ft.Divider(height=20),
+        ft.ElevatedButton("Generar Comanda", on_click=generar_comanda, bgcolor="#4CAF50", color="#F2E8EC"),
     )
 
 ft.app(target=main)
