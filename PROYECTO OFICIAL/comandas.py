@@ -96,9 +96,7 @@ def main(page: ft.Page):
                 ],
                 on_change=lambda e, idx=idx: actualizar_estado(e, idx),
                 width=120,
-                color=estado_color,
-                border_color=estado_color,
-                focused_border_color=estado_color
+                color=estado_color
             )
             comandas_realizadas_drawer.controls.append(
                 ft.Column(
@@ -159,8 +157,8 @@ def main(page: ft.Page):
                 ft.Row(
                     [
                         ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, platillo=platillo: eliminar_platillo(e, platillo), icon_color="#FF0000"),
-                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, platillo=platillo: editar_platillo(e, platillo), icon_color="#4CAF50")
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=platillo["id"] - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=platillo["id"] - 1: editar_platillo(e, idx), icon_color="#4CAF50")
                     ],
                     alignment=ft.MainAxisAlignment.START
                 )
@@ -179,8 +177,8 @@ def main(page: ft.Page):
                 ft.Row(
                     [
                         ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
-                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: editar_platillo(e, idx), icon_color="#4CAF50")
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=platillo["id"] - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=platillo["id"] - 1: editar_platillo(e, idx), icon_color="#4CAF50")
                     ],
                     alignment=ft.MainAxisAlignment.START
                 )
@@ -202,8 +200,8 @@ def main(page: ft.Page):
                 ft.Row(
                     [
                         ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, platillo=platillo: eliminar_platillo(e, platillo), icon_color="#FF0000"),
-                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, platillo=platillo: editar_platillo(e, platillo), icon_color="#4CAF50")
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=platillo["id"] - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=platillo["id"] - 1: editar_platillo(e, idx), icon_color="#4CAF50")
                     ],
                     alignment=ft.MainAxisAlignment.START
                 )
