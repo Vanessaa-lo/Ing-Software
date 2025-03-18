@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 10-03-2025 a las 04:21:07
+-- Tiempo de generación: 18-03-2025 a las 01:25:46
 -- Versión del servidor: 5.7.24
 -- Versión de PHP: 8.3.1
 
@@ -141,8 +141,17 @@ CREATE TABLE `entradasproductos` (
   `Cantidad` int(11) NOT NULL,
   `Fecha` date NOT NULL,
   `Descripcion` varchar(45) NOT NULL,
-  `CorteCaja_idCorteCaja` int(11) NOT NULL
+  `CorteCaja_idCorteCaja` int(11) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Volcado de datos para la tabla `entradasproductos`
+--
+
+INSERT INTO `entradasproductos` (`IdEntradasProductos`, `Cantidad`, `Fecha`, `Descripcion`, `CorteCaja_idCorteCaja`) VALUES
+(1, 2, '2025-03-12', '122', 1),
+(2, 2, '2025-03-12', '122', 1),
+(3, 12, '2025-03-12', 'acda', 1);
 
 -- --------------------------------------------------------
 
@@ -213,12 +222,19 @@ CREATE TABLE `productos` (
   `IdProductos` int(11) NOT NULL,
   `Nombre` varchar(30) NOT NULL,
   `Precio` double NOT NULL,
-  `FechaCaducidad` date NOT NULL,
+  `FechaCaducidad` int(11) NOT NULL,
   `Descripcion` varchar(45) NOT NULL,
   `Marca` varchar(25) NOT NULL,
   `UnidadMedida` varchar(25) NOT NULL,
-  `CorteCaja_idCorteCaja` int(11) NOT NULL
+  `CorteCaja_idCorteCaja` int(11) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Volcado de datos para la tabla `productos`
+--
+
+INSERT INTO `productos` (`IdProductos`, `Nombre`, `Precio`, `FechaCaducidad`, `Descripcion`, `Marca`, `UnidadMedida`, `CorteCaja_idCorteCaja`) VALUES
+(1, 'wefgh', 12, 111234, 'sdfghj', 'ml', 'mm', 1);
 
 -- --------------------------------------------------------
 
@@ -245,8 +261,15 @@ CREATE TABLE `salidasproductos` (
   `FechaSalida` date NOT NULL,
   `Detalle` varchar(45) NOT NULL,
   `Cantidad` varchar(45) NOT NULL,
-  `CorteCaja_idCorteCaja` int(11) NOT NULL
+  `CorteCaja_idCorteCaja` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Volcado de datos para la tabla `salidasproductos`
+--
+
+INSERT INTO `salidasproductos` (`IdSalidasProductos`, `FechaSalida`, `Detalle`, `Cantidad`, `CorteCaja_idCorteCaja`) VALUES
+(1, '2025-03-12', '22', '11', NULL);
 
 -- --------------------------------------------------------
 
@@ -387,6 +410,7 @@ ALTER TABLE `platillos`
 -- Indices de la tabla `productos`
 --
 ALTER TABLE `productos`
+  ADD PRIMARY KEY (`IdProductos`),
   ADD KEY `fk_Productos_CorteCaja1_idx` (`CorteCaja_idCorteCaja`);
 
 --
@@ -434,16 +458,40 @@ ALTER TABLE `cliente`
   MODIFY `IdCliente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT de la tabla `cortecaja`
+--
+ALTER TABLE `cortecaja`
+  MODIFY `idCorteCaja` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `empleado`
 --
 ALTER TABLE `empleado`
   MODIFY `IdEmpleado` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT de la tabla `entradasproductos`
+--
+ALTER TABLE `entradasproductos`
+  MODIFY `IdEntradasProductos` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT de la tabla `estatuspedido`
 --
 ALTER TABLE `estatuspedido`
   MODIFY `IdEstatusPedido` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `productos`
+--
+ALTER TABLE `productos`
+  MODIFY `IdProductos` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT de la tabla `salidasproductos`
+--
+ALTER TABLE `salidasproductos`
+  MODIFY `IdSalidasProductos` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario`
@@ -483,13 +531,7 @@ ALTER TABLE `empleado`
 -- Filtros para la tabla `entradarecibe`
 --
 ALTER TABLE `entradarecibe`
-  ADD CONSTRAINT `fk_EntradaRecibe_CorteCaja1` FOREIGN KEY (`CorteCaja_idCorteCaja`) REFERENCES `cortecaja` (`idCorteCaja`) ON DELETE NO ACTION ON UPDATE NO ACTION;
-
---
--- Filtros para la tabla `entradasproductos`
---
-ALTER TABLE `entradasproductos`
-  ADD CONSTRAINT `fk_EntradasProductos_CorteCaja1` FOREIGN KEY (`CorteCaja_idCorteCaja`) REFERENCES `cortecaja` (`idCorteCaja`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT `fk_EntradaRecibe_CorteCaja1` FOREIGN KEY (`CorteCaja_idCorteCaja`) REFERENCES `cortecaja` (`idCorteCaja`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `generarpedido`
