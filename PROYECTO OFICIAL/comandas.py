@@ -239,10 +239,10 @@ def main(page: ft.Page):
 
     observaciones_input = ft.TextField(label="Observaciones", width=300, color="#F2E8EC")
 
-    platillos_agregados = ft.Column()
+    platillos_agregados = ft.Column(scroll=True)  # Permitir scroll en pantallas pequeñas
 
     # Drawer para comandas realizadas
-    comandas_realizadas_drawer = ft.Column()
+    comandas_realizadas_drawer = ft.Column(scroll=True)  # Permitir scroll en pantallas pequeñas
 
     # Sidebar
     drawer = ft.NavigationDrawer(
@@ -284,24 +284,27 @@ def main(page: ft.Page):
     # Texto para mostrar el número de comanda
     comanda_numero_text = ft.Text(f"Comanda # {comanda_data['numero_comanda']}", size=20, weight=ft.FontWeight.BOLD, color="#E71790")
 
-    page.add(
-        comanda_numero_text,
-        numero_mesa_dropdown,
-        numero_comensales_dropdown,
-        ft.Divider(height=20),
-
-        ft.Text("Platillos/Bebidas a Ordenar", size=18, color="#F2E8EC"),
-        platillo_input,
-        cantidad_input,
-        observaciones_input,
-        ft.ElevatedButton("Agregar Platillo", on_click=agregar_platillo, bgcolor="#8E2453", color="#F2E8EC"),
-        ft.Divider(height=20),
-
-        platillos_agregados,
-
-        ft.Divider(height=20),
-        ft.ElevatedButton("Generar Comanda", on_click=generar_comanda, bgcolor="#4CAF50", color="#F2E8EC"),
+    # Contenedor principal
+    main_container = ft.Column(
+        [
+            comanda_numero_text,
+            numero_mesa_dropdown,
+            numero_comensales_dropdown,
+            ft.Divider(height=20),
+            ft.Text("Platillos/Bebidas a Ordenar", size=18, color="#F2E8EC"),
+            platillo_input,
+            cantidad_input,
+            observaciones_input,
+            ft.ElevatedButton("Agregar Platillo", on_click=agregar_platillo, bgcolor="#8E2453", color="#F2E8EC"),
+            ft.Divider(height=20),
+            platillos_agregados,
+            ft.Divider(height=20),
+            ft.ElevatedButton("Generar Comanda", on_click=generar_comanda, bgcolor="#4CAF50", color="#F2E8EC"),
+        ],
+        expand=True,  # Ocupar todo el espacio disponible
+        scroll=True  # Permitir scroll en pantallas pequeñas
     )
 
-ft.app(target=main)
+    page.add(main_container)
 
+ft.app(target=main)
