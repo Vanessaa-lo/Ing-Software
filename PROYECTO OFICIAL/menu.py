@@ -1,4 +1,6 @@
 import flet as ft
+from datetime import datetime
+
 
 def main(page: ft.Page):
     page.title = "Menú de Platillos"
@@ -8,6 +10,8 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     
     carrito = []
+    pedidos = []
+
     
     sidebar = ft.NavigationDrawer(
         controls=[
@@ -15,36 +19,35 @@ def main(page: ft.Page):
             ft.Divider(),
             ft.TextButton("Inicio", icon=ft.icons.HOME, style=ft.ButtonStyle(color="#F2E8EC")),
             ft.TextButton("Pedidos", icon=ft.icons.LIST, style=ft.ButtonStyle(color="#F2E8EC")),
+            ft.TextButton("Estatus del Pedido", icon=ft.icons.CHECK_CIRCLE, style=ft.ButtonStyle(color="#F2E8EC"), on_click=lambda e: ver_estatus_pedido()),
             ft.TextButton("Perfil", icon=ft.icons.PERSON, style=ft.ButtonStyle(color="#F2E8EC")),
         ]
     )
     
     def abrir_sidebar(e):
-        sidebar.open = True
+        page.drawer = sidebar
+        page.drawer.open = True
         page.update()
     
     def mostrar_carrito(e):
-        page.clean()
-        total = sum(p['precio'] for p in carrito)
-        pedidos = "\n".join([f"- {p['nombre']} (${p['precio']}) - Ingredientes: {', '.join(p['ingredientes'])}" for p in carrito]) if carrito else "Carrito vacío."
-        page.add(
-            ft.Column([
-                ft.Row([
-                    ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e: mostrar_menu()),
-                    ft.Text("Carrito de Compras", size=26, weight=ft.FontWeight.BOLD, color="#E71790")
-                ]),
-                ft.Container(
-                    ft.Column([
-                        ft.Text(pedidos, size=18, color="#F2E8EC"),
-                        ft.Text(f"Total: ${total}", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
-                    ]),
-                    padding=10,
-                    border_radius=10,
-                    bgcolor="#1F1F1F"
-                ),
-                ft.ElevatedButton("Volver al Menú", on_click=lambda e: mostrar_menu(), bgcolor="#E71790", color="white")
-            ], alignment=ft.MainAxisAlignment.CENTER)
+        carrito_drawer = ft.NavigationDrawer(
+            controls=[
+                ft.Text("Carrito de Compras", size=26, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Divider(),
+                *(ft.Text(f"{p['nombre']} - ${p['precio']} - Ingredientes: {', '.join(p['ingredientes'])}", size=16, color="#F2E8EC") for p in carrito),
+                ft.Text(f"Total: ${sum(p['precio'] for p in carrito)}", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.TextButton("Estatus del Pedido", icon=ft.icons.CHECK_CIRCLE, style=ft.ButtonStyle(color="#F2E8EC"), on_click=lambda e: ver_estatus_pedido()),
+                ft.ElevatedButton("Confirmar Pedido", on_click=lambda e: confirmar_pedido(), bgcolor="#28A745", color="white"),
+                ft.ElevatedButton("Cerrar", on_click=lambda e: cerrar_carrito(), bgcolor="#E71790", color="white")
+            ]
         )
+        page.end_drawer = carrito_drawer
+        page.end_drawer.open = True
+        page.update()
+    
+    def cerrar_carrito():
+        page.end_drawer.open = False
+        page.update()
     
     platillos = [
         {"nombre": "Pizza Hawaiana", "imagen": "pizza.png", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
@@ -57,6 +60,46 @@ def main(page: ft.Page):
         page.snack_bar = ft.SnackBar(content=ft.Text(f"{platillo['nombre']} agregado al carrito!"))
         page.snack_bar.open = True
         mostrar_menu()
+
+    def confirmar_pedido():
+        if carrito:
+            pedido = {
+                "productos": carrito[:],
+                "total": sum(p["precio"] for p in carrito),
+                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "estatus": "En preparación"
+            }
+            pedidos.append(pedido)
+            carrito.clear()  # Limpia el carrito después de confirmar
+            cerrar_carrito()  # Cierra el carrito después de confirmar
+            page.snack_bar = ft.SnackBar(content=ft.Text("Pedido realizado con éxito!"))
+            page.snack_bar.open = True
+            page.update()
+    
+    def ver_pedidos():
+        page.clean()
+        page.add(
+            ft.Column([
+                ft.Text("Pedidos Realizados", size=26, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Divider(),
+                *(ft.Text(f"Fecha: {p['fecha']} - Total: ${p['total']} - Estatus: {p['estatus']}", size=16, color="#F2E8EC") for p in pedidos),
+                ft.ElevatedButton("Volver", on_click=lambda e: mostrar_menu(), bgcolor="#E71790", color="white")
+            ], spacing=10)
+     )
+        
+    def ver_estatus_pedido():
+        page.clean()
+        page.add(
+            ft.Column([
+                ft.Text("Estatus del Pedido", size=26, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Divider(),
+                *(ft.Text(f"Fecha: {p['fecha']} - Estatus: {p['estatus']}", size=16, color="#F2E8EC") for p in pedidos),
+                ft.ElevatedButton("Volver", on_click=lambda e: mostrar_menu(), bgcolor="#E71790", color="white")
+            ], spacing=10)
+        )
+
+
+
     
     def mostrar_detalle(e, platillo):
         checkboxes = [ft.Checkbox(label=i, value=False) for i in platillo["ingredientes"]]
@@ -111,4 +154,3 @@ def main(page: ft.Page):
     mostrar_menu()
     
 ft.app(target=main)
-
