@@ -44,14 +44,14 @@ def main(page: ft.Page):
                     on_click=lambda e: abrir_archivo("login.py")  # ✅ Ejecuta login.py
                 ),
                 ft.ListTile(
-                    leading=ft.Icon(ft.Icons.MENU_BOOK),
-                    title=ft.Text("Menú Interactivo"),
-                    on_click=lambda e: abrir_archivo("menu.py")  # ✅ Ejecuta menu.py
-                ),
-                ft.ListTile(
                     leading=ft.Icon(ft.Icons.LIST),
                     title=ft.Text("Comandas"),
                     on_click=lambda e: abrir_archivo("comandas.py")  # ✅ Ejecuta comandas.py
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.HOME),
+                    title=ft.Text("Home"),
+                    on_click=lambda e: abrir_archivo("main.py")  # ✅ Ejecuta menu.py
                 ),
             ], spacing=10)
         ]
@@ -115,7 +115,7 @@ def main(page: ft.Page):
     
     platillos = [
         {"nombre": "Pizza Hawaiana", "imagen": "pizza.png", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
-        {"nombre": "Hamburguesa BBQ", "imagen": "burger.png", "precio": 150, "ingredientes": ["Carne", "Queso", "Salsa BBQ"]},
+        {"nombre": "Hamburguesa BBQ", "imagen": "image/3.jpeg", "precio": 150, "ingredientes": ["Carne", "Queso", "Salsa BBQ"]},
         {"nombre": "Tacos al Pastor", "imagen": "tacos.png", "precio": 100, "ingredientes": ["Pastor", "Cilantro", "Cebolla"]},
     ]
     

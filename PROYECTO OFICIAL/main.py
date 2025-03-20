@@ -35,7 +35,7 @@ def main(page: ft.Page):
 
                     ft.ListTile(
                         leading=ft.Icon(ft.Icons.MENU_BOOK),
-                        title=ft.Text("Menú Interactivo"),
+                        title=ft.Text("Menú del Restaurante"),
                         on_click=lambda e: abrir_archivo("menu.py")
                     ),
                     ft.ListTile(

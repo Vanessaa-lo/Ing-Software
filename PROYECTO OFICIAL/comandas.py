@@ -15,7 +15,7 @@ def main(page: ft.Page):
     comanda_data = {
         "numero_comanda": 1,
         "fecha_hora": "",
-        "nombre_mesero": "Pedro",
+        "nombre_mesero": "Roberto",
         "numero_mesa": "",
         "numero_comensales": "",
         "platillos": [],
