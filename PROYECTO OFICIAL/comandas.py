@@ -1,5 +1,9 @@
 import flet as ft
 from datetime import datetime
+import os
+import subprocess
+
+usuario_actual = "Roberto Empleado"
 
 def main(page: ft.Page):
     page.title = "Módulo Meseros"
@@ -239,19 +243,48 @@ def main(page: ft.Page):
 
     observaciones_input = ft.TextField(label="Observaciones", width=300, color="#F2E8EC")
 
-    platillos_agregados = ft.Column(scroll=True)  # Permitir scroll en pantallas pequeñas
+    platillos_agregados = ft.Column()
 
     # Drawer para comandas realizadas
-    comandas_realizadas_drawer = ft.Column(scroll=True)  # Permitir scroll en pantallas pequeñas
+    comandas_realizadas_drawer = ft.Column()
 
     # Sidebar
-    drawer = ft.NavigationDrawer(
-        controls=[ft.Text("Menú", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
-                  ft.NavigationDrawerDestination(icon=ft.icons.RESTAURANT, label="Platillos"),
-                  ft.NavigationDrawerDestination(icon=ft.icons.LOCAL_DRINK, label="Bebidas"),
-                  ft.NavigationDrawerDestination(icon=ft.icons.PAYMENT, label="Pagos"),
-                  ],
-        bgcolor="#8E2453"
+
+    def toggle_sidebar(e):
+        page.drawer.open = not page.drawer.open
+        page.update()
+
+    # ✅ Función para abrir archivos externos
+    def abrir_archivo(nombre_archivo):
+        ruta = os.path.join(os.path.dirname(__file__), nombre_archivo)
+        subprocess.Popen(["python", ruta])  # Ejecuta el archivo .py
+
+    # ✅ SIDEBAR (Menú lateral)
+    page.drawer = ft.NavigationDrawer(
+        controls=[
+            ft.Column([
+                ft.Container(
+                    content=ft.Text(f"Usuario: {usuario_actual}", size=16, color="#E71790"),
+                    padding=10
+                ),
+                ft.Divider(),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.LOGIN),
+                    title=ft.Text("Regresar al Login"),
+                    on_click=lambda e: abrir_archivo("login.py")  # ✅ Ejecuta login.py
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.MENU_BOOK),
+                    title=ft.Text("Menú Interactivo"),
+                    on_click=lambda e: abrir_archivo("menu.py")  # ✅ Ejecuta menu.py
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.HOME),
+                    title=ft.Text("Home"),
+                    on_click=lambda e: abrir_archivo("main.py")  # ✅ Ejecuta comandas.py
+                ),
+            ], spacing=10)
+        ]
     )
 
     # Drawer para comandas realizadas
@@ -261,9 +294,7 @@ def main(page: ft.Page):
         bgcolor="#5D0E41"
     )
 
-    def toggle_sidebar(e):
-        drawer.open = not drawer.open
-        page.update()
+
 
     def toggle_comandas_drawer(e):
         mostrar_comandas_realizadas(e)  # Actualizar la lista de comandas
@@ -278,33 +309,29 @@ def main(page: ft.Page):
     )
 
     page.appbar = appbar
-    page.drawer = drawer
     page.end_drawer = comandas_drawer
 
     # Texto para mostrar el número de comanda
     comanda_numero_text = ft.Text(f"Comanda # {comanda_data['numero_comanda']}", size=20, weight=ft.FontWeight.BOLD, color="#E71790")
 
-    # Contenedor principal
-    main_container = ft.Column(
-        [
-            comanda_numero_text,
-            numero_mesa_dropdown,
-            numero_comensales_dropdown,
-            ft.Divider(height=20),
-            ft.Text("Platillos/Bebidas a Ordenar", size=18, color="#F2E8EC"),
-            platillo_input,
-            cantidad_input,
-            observaciones_input,
-            ft.ElevatedButton("Agregar Platillo", on_click=agregar_platillo, bgcolor="#8E2453", color="#F2E8EC"),
-            ft.Divider(height=20),
-            platillos_agregados,
-            ft.Divider(height=20),
-            ft.ElevatedButton("Generar Comanda", on_click=generar_comanda, bgcolor="#4CAF50", color="#F2E8EC"),
-        ],
-        expand=True,  # Ocupar todo el espacio disponible
-        scroll=True  # Permitir scroll en pantallas pequeñas
+    page.add(
+        comanda_numero_text,
+        numero_mesa_dropdown,
+        numero_comensales_dropdown,
+        ft.Divider(height=20),
+
+        ft.Text("Platillos/Bebidas a Ordenar", size=18, color="#F2E8EC"),
+        platillo_input,
+        cantidad_input,
+        observaciones_input,
+        ft.ElevatedButton("Agregar Platillo", on_click=agregar_platillo, bgcolor="#8E2453", color="#F2E8EC"),
+        ft.Divider(height=20),
+
+        platillos_agregados,
+
+        ft.Divider(height=20),
+        ft.ElevatedButton("Generar Comanda", on_click=generar_comanda, bgcolor="#4CAF50", color="#F2E8EC"),
     )
 
-    page.add(main_container)
-
 ft.app(target=main)
+

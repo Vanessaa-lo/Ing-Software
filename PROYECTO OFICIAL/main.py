@@ -1,5 +1,9 @@
 import flet as ft
 from db_config import conectar_bd
+import subprocess
+import os
+usuario_actual = "Roberto Empleado"
+
 
 def main(page: ft.Page):
     page.title = "Punto de Venta"
@@ -11,21 +15,126 @@ def main(page: ft.Page):
         page.drawer.open = not page.drawer.open
         page.update()
 
+    def abrir_archivo(nombre_archivo):
+        ruta = os.path.join(os.path.dirname(__file__), nombre_archivo)
+        subprocess.Popen(["python", ruta])  # Ejecuta el archivo .py
+
+    page.drawer = ft.NavigationDrawer(
+        controls=[
+            ft.Container(
+                content=ft.Column([
+                    ft.Text("Menú", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                    ft.Text(f"Usuario: {usuario_actual}", size=16, color="#E71790"),  # Muestra el usuario actual
+                    ft.Divider(),
+                    
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.LOGIN),
+                        title=ft.Text("Regresar al Login"),
+                        on_click=lambda e: abrir_archivo("login.py")
+                    ),
+
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.MENU_BOOK),
+                        title=ft.Text("Menú Interactivo"),
+                        on_click=lambda e: abrir_archivo("menu.py")
+                    ),
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.LIST),
+                        title=ft.Text("Comandas"),
+                        on_click=lambda e: abrir_archivo("comandas.py")
+                    ),
+             ], spacing=20),
+                padding=20
+            )
+        ]
+    )
+
     def mostrar_inicio(e=None):
         page.clean()
+
+
+        # Lista de opciones del menú principal
+        opciones = [
+            {"titulo": "Ver Inventario", "accion": mostrar_inventario},
+            {"titulo": "Entradas y Salidas", "accion": mostrar_entradas_salidas},
+            {"titulo": "Caja Chica", "accion": mostrar_caja_chica},
+            {"titulo": "Generar Reportes", "accion": mostrar_reportes}  # ✅ Nueva tarjeta
+
+        ]
+
+        # Generamos las tarjetas con botones
+        tarjetas = []
+        for opcion in opciones:
+            tarjeta = ft.Container(
+                content=ft.Column([
+                    ft.Text(opcion["titulo"], size=18, weight=ft.FontWeight.BOLD, color="white"),
+                    ft.ElevatedButton("Ingresar", on_click=opcion["accion"], bgcolor="#E71790", color="white")
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                width=250,
+                height=150,
+                bgcolor="#2A2A2A",
+                border_radius=10,
+                padding=10
+            )
+            tarjetas.append(tarjeta)
+
+        # Crear GridView y agregar tarjetas correctamente
+        grid = ft.GridView(
+            expand=True,
+            runs_count=2,  # 2 columnas en PC, 1 en móvil
+            max_extent=250,  # Tamaño máximo de cada tarjeta
+            spacing=10,
+            run_spacing=10
+        )
+        grid.controls.extend(tarjetas)  # ✅ Agregar tarjetas correctamente
+
         page.add(
             ft.Column([
-                ft.Row([
-                    ft.IconButton(ft.Icons.MENU, on_click=toggle_sidebar),
-                    ft.Text("Punto de Venta", size=24, weight=ft.FontWeight.BOLD, color="#E71790")
-                ], alignment=ft.MainAxisAlignment.START),
-                ft.Text("Gestiona ventas, productos e inventario", size=16, color="#F2E8EC"),
-                ft.Divider(),
-                ft.ElevatedButton("Ver Inventario", on_click=mostrar_inventario, bgcolor="#E71790", color="white"),
-                ft.ElevatedButton("Entradas y Salidas", on_click=mostrar_entradas_salidas, bgcolor="#E71790", color="white"),
-                ft.ElevatedButton("Caja Chica", on_click=mostrar_caja_chica, bgcolor="#E71790", color="white")
+                grid  # Agregamos el GridView corregido
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
         )
+
+
+    def mostrar_login():
+        page.clean()
+        page.add(ft.Text( size=24, weight=ft.FontWeight.BOLD, color="#E71790"))
+        page.update()
+
+    def mostrar_reportes(e=None):
+        page.clean()
+
+        # Datos de ejemplo (sin conexión a la base de datos)
+        ventas_totales = 12500.50  # Ventas del día en $
+        total_productos = 230  # Cantidad de productos en inventario
+        dinero_en_caja = 5400.75  # Dinero en caja en $
+        total_comandas = 35  # Número de comandas generadas
+        usuario_actual = "Roberto Empleado"  # Usuario logueado
+
+        # Mostrar reportes en la pantalla
+        page.add(
+            ft.Column([
+                ft.Text("📊 Reporte del Día", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Divider(),
+
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text(f"📅 Ventas del Día: ${ventas_totales:.2f}", size=18, color="white"),
+                        ft.Text(f"📦 Inventario Disponible: {total_productos} productos", size=18, color="white"),
+                        ft.Text(f"💰 Dinero en Caja: ${dinero_en_caja:.2f}", size=18, color="white"),
+                        ft.Text(f"📝 Comandas Generadas: {total_comandas}", size=18, color="white"),
+                        ft.Text(f"👤 Usuario: {usuario_actual}", size=18, color="#E71790")
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                    padding=20,
+                    bgcolor="#2A2A2A",
+                    border_radius=10,
+                    width=400
+                ),
+
+                ft.ElevatedButton("Volver", on_click=mostrar_inicio, bgcolor="#5D0E41", color="white")
+            ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
+        )
+
+
 
     def mostrar_inventario(e=None):
         page.clean()
@@ -242,13 +351,23 @@ def main(page: ft.Page):
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
         )
 
+    def mostrar_menu(e=None):
+        page.clean()
+        page.add(ft.Text("Menú Interactivo", size=24, weight=ft.FontWeight.BOLD, color="white"))
+        page.update()
+
+
+    def mostrar_comandas(e=None):
+        page.clean()
+        page.add(ft.Text("Gestión de Comandas", size=24, weight=ft.FontWeight.BOLD, color="white"))
+        page.update()
+
+
     page.appbar = ft.AppBar(
         title=ft.Text("Punto de Venta", color="#F2E8EC"),
         leading=ft.IconButton(ft.Icons.MENU, on_click=toggle_sidebar, icon_color="#E71790"),
         bgcolor="#5D0E41"
     )
-
-    page.drawer = page.drawer
     mostrar_inicio()
 
 ft.app(target=main)
