@@ -114,9 +114,9 @@ def main(page: ft.Page):
         page.update()
     
     platillos = [
-        {"nombre": "Pizza Hawaiana", "imagen": "pizza.png", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
+        {"nombre": "Pizza Hawaiana", "imagen": "image/1.png", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
         {"nombre": "Hamburguesa BBQ", "imagen": "image/2.jpeg", "precio": 150, "ingredientes": ["Carne", "Queso", "Salsa BBQ", "Tocino", "Lechuga", "Papas"]},
-        {"nombre": "Tacos al Pastor", "imagen": "tacos.png", "precio": 100, "ingredientes": ["Pastor", "Cilantro", "Cebolla"]},
+        {"nombre": "Tacos al Pastor", "imagen": "tacos/3.png", "precio": 100, "ingredientes": ["Pastor", "Cilantro", "Cebolla"]},
     ]
     
     def agregar_al_carrito(e, platillo, ingredientes_seleccionados):
