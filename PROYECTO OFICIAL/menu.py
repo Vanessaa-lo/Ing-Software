@@ -115,7 +115,7 @@ def main(page: ft.Page):
     
     platillos = [
         {"nombre": "Pizza Hawaiana", "imagen": "pizza.png", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
-        {"nombre": "Hamburguesa BBQ", "imagen": "image/3.jpeg", "precio": 150, "ingredientes": ["Carne", "Queso", "Salsa BBQ"]},
+        {"nombre": "Hamburguesa BBQ", "imagen": "image/2.jpeg", "precio": 150, "ingredientes": ["Carne", "Queso", "Salsa BBQ", "Tocino", "Lechuga", "Papas"]},
         {"nombre": "Tacos al Pastor", "imagen": "tacos.png", "precio": 100, "ingredientes": ["Pastor", "Cilantro", "Cebolla"]},
     ]
     
