@@ -2,7 +2,7 @@ import flet as ft
 from datetime import datetime
 import os
 import subprocess
-
+from db_config import conectar_bd
 usuario_actual = "Roberto Empleado"
 
 def main(page: ft.Page):
@@ -15,7 +15,7 @@ def main(page: ft.Page):
     comanda_data = {
         "numero_comanda": 1,
         "fecha_hora": "",
-        "nombre_mesero": "Roberto",
+        "nombre_mesero": "Pedro",
         "numero_mesa": "",
         "numero_comensales": "",
         "platillos": [],
@@ -55,40 +55,78 @@ def main(page: ft.Page):
     # Función para generar la comanda
     def generar_comanda(e):
         if not comanda_data["platillos"]:
-            return  # No generar comanda si no hay platillos
+            return
 
-        comanda_data["fecha_hora"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        comanda_data["numero_mesa"] = int(numero_mesa_dropdown.value)  # Convertir a entero
-        comanda_data["numero_comensales"] = int(numero_comensales_dropdown.value)  # Convertir a entero
+        comanda_data["fecha_hora"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        fecha_actual = comanda_data["fecha_hora"].split()[0]
+        hora_actual = comanda_data["fecha_hora"].split()[1]
 
-        # Guardar la comanda realizada
-        comandas_realizadas.append(comanda_data.copy())
+        comanda_data["numero_mesa"] = int(numero_mesa_dropdown.value)
+        comanda_data["numero_comensales"] = int(numero_comensales_dropdown.value)
 
-        # Incrementar el número de comanda para la próxima
-        comanda_data["numero_comanda"] += 1
-        comanda_data["platillos"] = []  # Limpiar la lista de platillos
-        comanda_data["estado"] = "En preparación"  # Reiniciar el estado
-        platillos_agregados.controls.clear()
+        descripcion = f"{comanda_data['numero_comensales']} comensales | " + ", ".join([
+            f"{p['platillo']} ({p['cantidad']}){' - ' + p['observaciones'] if p['observaciones'] else ''}"
+            for p in comanda_data["platillos"]
+        ])
+        estatus = "Pedido Realizado"
+        id_cliente = 1  # puedes cambiar esto según el cliente actual
 
-        # Actualizar la visualización del número de comanda
-        comanda_numero_text.value = f"Comanda # {comanda_data['numero_comanda']}"
-        page.update()
+        try:
+            conn = conectar_bd()
+            cursor = conn.cursor()
 
+            # Obtener o crear el estatus
+            cursor.execute("SELECT IdEstatusPedido FROM estatuspedido WHERE SituacionPedido = %s", (estatus,))
+            row = cursor.fetchone()
+            if row:
+                id_estatus = row[0]
+            else:
+                cursor.execute("INSERT INTO estatuspedido (SituacionPedido) VALUES (%s)", (estatus,))
+                conn.commit()
+                id_estatus = cursor.lastrowid
+
+            # Insertar en generarpedido
+            cursor.execute("""
+                INSERT INTO generarpedido (HoraPedido, FechaPedido, Producto, NumeroMesa, Estatus, EstatusPedido_IdEstatusPedido, Clientes_Idcliente)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (hora_actual, fecha_actual, descripcion, comanda_data["numero_mesa"], estatus, id_estatus, id_cliente))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            # Actualizar UI
+            comandas_realizadas.append(comanda_data.copy())
+            comanda_data["numero_comanda"] += 1
+            comanda_data["platillos"] = []
+            comanda_data["estado"] = "En preparación"
+            platillos_agregados.controls.clear()
+            comanda_numero_text.value = f"Comanda # {comanda_data['numero_comanda']}"
+            page.snack_bar = ft.SnackBar(content=ft.Text("✅ Comanda registrada en base de datos"))
+            page.snack_bar.open = True
+            page.update()
+
+        except Exception as ex:
+            page.snack_bar = ft.SnackBar(content=ft.Text(f"❌ Error al guardar: {str(ex)}"))
+            page.snack_bar.open = True
+            page.update()
+
+    # Función para mostrar las comandas realizadas en el drawer
     def mostrar_comandas_realizadas(e):
         comandas_realizadas_drawer.controls.clear()
         for idx, comanda in enumerate(comandas_realizadas):
-            # Colores e íconos por estado
+            # Definir el color y el ícono según el estado
             estado_color = {
                 "En preparación": "#FFC107",  # Amarillo
                 "Listo": "#4CAF50",  # Verde
                 "Entregado": "#2196F3"  # Azul
-            }.get(comanda["estado"], "#B0BEC5")  # Gris pastel suave
+            }.get(comanda["estado"], "#F2E8EC")  # Color por defecto
 
             estado_icono = {
                 "En preparación": ft.icons.ACCESS_TIME,
                 "Listo": ft.icons.CHECK_CIRCLE,
                 "Entregado": ft.icons.LOCAL_SHIPPING
-            }.get(comanda["estado"], ft.icons.INFO)
+            }.get(comanda["estado"], ft.icons.INFO)  # Ícono por defecto
 
             estado_dropdown = ft.Dropdown(
                 value=comanda["estado"],
@@ -98,83 +136,36 @@ def main(page: ft.Page):
                     ft.dropdown.Option("Entregado")
                 ],
                 on_change=lambda e, idx=idx: actualizar_estado(e, idx),
-                width=180,
-                color=estado_color,
-                border_radius=10
+                width=120,
+                color=estado_color
             )
-
             comandas_realizadas_drawer.controls.append(
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column(
+                ft.Column(
+                    [
+                        ft.Text(f"Comanda #{comanda['numero_comanda']}", weight=ft.FontWeight.BOLD, color="#E71790"),
+                        ft.Text(f"Fecha y Hora: {comanda['fecha_hora']}", color="#F2E8EC"),
+                        ft.Text(f"Mesa: {comanda['numero_mesa']} - Comensales: {comanda['numero_comensales']}", color="#F2E8EC"),
+                        ft.Text("Platillos/Bebidas:", weight=ft.FontWeight.BOLD, color="#E71790"),
+                        *[ft.Text(f"- {platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC") for platillo in comanda['platillos']],
+                        ft.Row(
                             [
-                                ft.Row(
-                                    [
-                                        ft.Icon(name=estado_icono, color=estado_color, size=24),
-                                        ft.Text(f"Comanda #{comanda['numero_comanda']}", weight="bold", size=18, color="#E71790"),
-                                        ft.Text(comanda["fecha_hora"], size=12, color="#B0BEC5")
-                                    ],
-                                    alignment="spaceBetween"
-                                ),
-                                ft.Text(f"Mesa {comanda['numero_mesa']} | Comensales: {comanda['numero_comensales']}", size=14, color="#F2E8EC"),
-                                ft.Divider(height=10, color="#E0E0E0"),
-
-                                ft.Text("Platillos:", weight="bold", size=14, color="#E71790"),
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            f"- {p['platillo']} (x{p['cantidad']}) — {p['observaciones']}",
-                                            size=13,
-                                            color="#F2E8EC"
-                                        )
-                                        for p in comanda["platillos"]
-                                    ],
-                                    spacing=2
-                                ),
-
-                                ft.Row(
-                                    [estado_dropdown],
-                                    alignment="start"
-                                ),
-
-                                ft.Row(
-                                    [
-                                        ft.ElevatedButton(
-                                            "🗑 Borrar",
-                                            on_click=lambda e, idx=idx: borrar_comanda(e, idx),
-                                            bgcolor="#E53935",
-                                            color="white",
-                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                        ),
-                                        ft.ElevatedButton(
-                                            "✏️ Modificar",
-                                            on_click=lambda e, idx=idx: modificar_comanda(e, idx),
-                                            bgcolor="#43A047",
-                                            color="white",
-                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                        )
-                                    ],
-                                    alignment="end",
-                                    spacing=10
-                                )
+                                ft.Icon(name=estado_icono, color=estado_color),
+                                estado_dropdown
                             ],
                             spacing=10
                         ),
-                        padding=15,
-                        border_radius=15,
-                        bgcolor="#1E1E2F",  # Fondo más oscuro para contraste
-                        shadow=ft.BoxShadow(
-                            spread_radius=1,
-                            blur_radius=10,
-                            color=ft.colors.BLACK26,
-                            offset=ft.Offset(2, 2)
+                        ft.Row(
+                            [
+                                ft.ElevatedButton("Borrar", on_click=lambda e, idx=idx: borrar_comanda(e, idx), bgcolor="#FF0000", color="#F2E8EC"),
+                                ft.ElevatedButton("Modificar", on_click=lambda e, idx=idx: modificar_comanda(e, idx), bgcolor="#4CAF50", color="#F2E8EC")
+                            ],
+                            spacing=10
                         )
-                    ),
-                    margin=10
+                    ],
+                    spacing=5
                 )
             )
         page.update()
-
 
     # Función para actualizar el estado de una comanda
     def actualizar_estado(e, idx):
@@ -279,7 +270,18 @@ def main(page: ft.Page):
         color="#F2E8EC"
     )
 
-    platillo_input = ft.TextField(label="Platillo/Bebida", width=300, color="#F2E8EC")
+    platillo_input = ft.Dropdown(
+        label="Platillo/Bebida",
+        options=[
+            ft.dropdown.Option("Pizza Hawaiana"),
+            ft.dropdown.Option("Hamburguesa BBQ"),
+            ft.dropdown.Option("Tacos al Pastor")
+        ],
+        width=300,
+        color="#F2E8EC"
+    )
+
+
     cantidad_input = ft.TextField(
         label="Cantidad",
         width=300,
