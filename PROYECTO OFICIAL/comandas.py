@@ -74,22 +74,21 @@ def main(page: ft.Page):
         comanda_numero_text.value = f"Comanda # {comanda_data['numero_comanda']}"
         page.update()
 
-    # Función para mostrar las comandas realizadas en el drawer
     def mostrar_comandas_realizadas(e):
         comandas_realizadas_drawer.controls.clear()
         for idx, comanda in enumerate(comandas_realizadas):
-            # Definir el color y el ícono según el estado
+            # Colores e íconos por estado
             estado_color = {
                 "En preparación": "#FFC107",  # Amarillo
                 "Listo": "#4CAF50",  # Verde
                 "Entregado": "#2196F3"  # Azul
-            }.get(comanda["estado"], "#F2E8EC")  # Color por defecto
+            }.get(comanda["estado"], "#B0BEC5")  # Gris pastel suave
 
             estado_icono = {
                 "En preparación": ft.icons.ACCESS_TIME,
                 "Listo": ft.icons.CHECK_CIRCLE,
                 "Entregado": ft.icons.LOCAL_SHIPPING
-            }.get(comanda["estado"], ft.icons.INFO)  # Ícono por defecto
+            }.get(comanda["estado"], ft.icons.INFO)
 
             estado_dropdown = ft.Dropdown(
                 value=comanda["estado"],
@@ -99,36 +98,83 @@ def main(page: ft.Page):
                     ft.dropdown.Option("Entregado")
                 ],
                 on_change=lambda e, idx=idx: actualizar_estado(e, idx),
-                width=120,
-                color=estado_color
+                width=180,
+                color=estado_color,
+                border_radius=10
             )
+
             comandas_realizadas_drawer.controls.append(
-                ft.Column(
-                    [
-                        ft.Text(f"Comanda #{comanda['numero_comanda']}", weight=ft.FontWeight.BOLD, color="#E71790"),
-                        ft.Text(f"Fecha y Hora: {comanda['fecha_hora']}", color="#F2E8EC"),
-                        ft.Text(f"Mesa: {comanda['numero_mesa']} - Comensales: {comanda['numero_comensales']}", color="#F2E8EC"),
-                        ft.Text("Platillos/Bebidas:", weight=ft.FontWeight.BOLD, color="#E71790"),
-                        *[ft.Text(f"- {platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC") for platillo in comanda['platillos']],
-                        ft.Row(
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column(
                             [
-                                ft.Icon(name=estado_icono, color=estado_color),
-                                estado_dropdown
+                                ft.Row(
+                                    [
+                                        ft.Icon(name=estado_icono, color=estado_color, size=24),
+                                        ft.Text(f"Comanda #{comanda['numero_comanda']}", weight="bold", size=18, color="#E71790"),
+                                        ft.Text(comanda["fecha_hora"], size=12, color="#B0BEC5")
+                                    ],
+                                    alignment="spaceBetween"
+                                ),
+                                ft.Text(f"Mesa {comanda['numero_mesa']} | Comensales: {comanda['numero_comensales']}", size=14, color="#F2E8EC"),
+                                ft.Divider(height=10, color="#E0E0E0"),
+
+                                ft.Text("Platillos:", weight="bold", size=14, color="#E71790"),
+                                ft.Column(
+                                    controls=[
+                                        ft.Text(
+                                            f"- {p['platillo']} (x{p['cantidad']}) — {p['observaciones']}",
+                                            size=13,
+                                            color="#F2E8EC"
+                                        )
+                                        for p in comanda["platillos"]
+                                    ],
+                                    spacing=2
+                                ),
+
+                                ft.Row(
+                                    [estado_dropdown],
+                                    alignment="start"
+                                ),
+
+                                ft.Row(
+                                    [
+                                        ft.ElevatedButton(
+                                            "🗑 Borrar",
+                                            on_click=lambda e, idx=idx: borrar_comanda(e, idx),
+                                            bgcolor="#E53935",
+                                            color="white",
+                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+                                        ),
+                                        ft.ElevatedButton(
+                                            "✏️ Modificar",
+                                            on_click=lambda e, idx=idx: modificar_comanda(e, idx),
+                                            bgcolor="#43A047",
+                                            color="white",
+                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+                                        )
+                                    ],
+                                    alignment="end",
+                                    spacing=10
+                                )
                             ],
                             spacing=10
                         ),
-                        ft.Row(
-                            [
-                                ft.ElevatedButton("Borrar", on_click=lambda e, idx=idx: borrar_comanda(e, idx), bgcolor="#FF0000", color="#F2E8EC"),
-                                ft.ElevatedButton("Modificar", on_click=lambda e, idx=idx: modificar_comanda(e, idx), bgcolor="#4CAF50", color="#F2E8EC")
-                            ],
-                            spacing=10
+                        padding=15,
+                        border_radius=15,
+                        bgcolor="#1E1E2F",  # Fondo más oscuro para contraste
+                        shadow=ft.BoxShadow(
+                            spread_radius=1,
+                            blur_radius=10,
+                            color=ft.colors.BLACK26,
+                            offset=ft.Offset(2, 2)
                         )
-                    ],
-                    spacing=5
+                    ),
+                    margin=10
                 )
             )
         page.update()
+
 
     # Función para actualizar el estado de una comanda
     def actualizar_estado(e, idx):
