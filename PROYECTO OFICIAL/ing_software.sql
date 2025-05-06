@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 10-04-2025 a las 22:53:49
+-- Tiempo de generación: 06-05-2025 a las 17:44:04
 -- Versión del servidor: 5.7.24
 -- Versión de PHP: 8.3.1
 
@@ -58,6 +58,21 @@ CREATE TABLE `comandapedido` (
   `IdComandaPedido` int(11) NOT NULL,
   `GenerarComanda` varchar(50) NOT NULL,
   `GenerarPedido_IdGenerarPedido` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `comandas`
+--
+
+CREATE TABLE `comandas` (
+  `id` int(11) NOT NULL,
+  `fecha_hora` datetime NOT NULL,
+  `mesero` varchar(100) NOT NULL,
+  `numero_mesa` int(11) NOT NULL,
+  `numero_comensales` int(11) NOT NULL,
+  `estado` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -249,6 +264,34 @@ CREATE TABLE `generarrecibo` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `platillos`
+--
+
+CREATE TABLE `platillos` (
+  `id` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `descripcion` text,
+  `precio` float NOT NULL,
+  `disponible` tinyint(1) DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `platillos_comanda`
+--
+
+CREATE TABLE `platillos_comanda` (
+  `id` int(11) NOT NULL,
+  `comanda_id` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `cantidad` int(11) NOT NULL,
+  `observaciones` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `productos`
 --
 
@@ -404,6 +447,12 @@ ALTER TABLE `comandapedido`
   ADD KEY `fk_ComandaPedido_GenerarPedido1_idx` (`GenerarPedido_IdGenerarPedido`);
 
 --
+-- Indices de la tabla `comandas`
+--
+ALTER TABLE `comandas`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indices de la tabla `cortecaja`
 --
 ALTER TABLE `cortecaja`
@@ -459,6 +508,19 @@ ALTER TABLE `generarpedido`
 ALTER TABLE `generarrecibo`
   ADD PRIMARY KEY (`IdGenerarRecibo`),
   ADD KEY `fk_GenerarRecibo_Ventas1_idx` (`Ventas_IdVentas`);
+
+--
+-- Indices de la tabla `platillos`
+--
+ALTER TABLE `platillos`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indices de la tabla `platillos_comanda`
+--
+ALTER TABLE `platillos_comanda`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `comanda_id` (`comanda_id`);
 
 --
 -- Indices de la tabla `productos`
@@ -518,6 +580,12 @@ ALTER TABLE `comandapedido`
   MODIFY `IdComandaPedido` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de la tabla `comandas`
+--
+ALTER TABLE `comandas`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `cortecaja`
 --
 ALTER TABLE `cortecaja`
@@ -552,6 +620,18 @@ ALTER TABLE `estatuspedido`
 --
 ALTER TABLE `generarpedido`
   MODIFY `IdGenerarPedido` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT de la tabla `platillos`
+--
+ALTER TABLE `platillos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `platillos_comanda`
+--
+ALTER TABLE `platillos_comanda`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `productos`
@@ -628,6 +708,12 @@ ALTER TABLE `generarpedido`
 --
 ALTER TABLE `generarrecibo`
   ADD CONSTRAINT `fk_GenerarRecibo_Ventas1` FOREIGN KEY (`Ventas_IdVentas`) REFERENCES `ventas` (`IdVentas`);
+
+--
+-- Filtros para la tabla `platillos_comanda`
+--
+ALTER TABLE `platillos_comanda`
+  ADD CONSTRAINT `platillos_comanda_ibfk_1` FOREIGN KEY (`comanda_id`) REFERENCES `comandas` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
