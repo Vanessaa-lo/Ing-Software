@@ -7,7 +7,7 @@ import subprocess
 import os
 
 usuario_actual = "Roberto Empleado"  # Se puede cambiar dinámicamente desde el login
-
+carrito = []
 
 def main(page: ft.Page):
     page.title = "Menú de Platillos"
@@ -16,7 +16,6 @@ def main(page: ft.Page):
     page.window_height = 800
     page.theme_mode = ft.ThemeMode.DARK
     
-    carrito = []
     pedidos = []
 
     
@@ -37,14 +36,9 @@ def main(page: ft.Page):
                 on_click=lambda e: mostrar_carrito(e)
             ),
             ft.ListTile(
-                leading=ft.Icon(ft.icons.CHECK_CIRCLE),
-                title=ft.Text("Ver Estatus Pedido"),
-                on_click=lambda e: mostrar_estatus_pedido()
-            ),
-            ft.ListTile(
                 leading=ft.Icon(ft.icons.LIST),
                 title=ft.Text("Ver Pedidos"),
-                on_click=lambda e: ver_pedidos()
+                on_click=lambda e: mostrar_estatus_pedido()
             ),
             
         ],
@@ -102,8 +96,8 @@ def main(page: ft.Page):
                 ft.Divider(),
                 *(ft.Text(f"{p['nombre']} - ${p['precio']} - Ingredientes: {', '.join(p['ingredientes'])}", size=16, color="#F2E8EC") for p in carrito),
                 ft.Text(f"Total: ${sum(p['precio'] for p in carrito)}", size=20, weight=ft.FontWeight.BOLD, color="#E71790"),
-                ft.TextButton("Estatus del Pedido: En Preparacion", icon=ft.icons.CHECK_CIRCLE, style=ft.ButtonStyle(color="#F2E8EC"), on_click=lambda e: mostrar_estatus_pedido()),
-                ft.ElevatedButton("Confirmar Pedido", on_click=lambda e: confirmar_pedido(), bgcolor="#28A745", color="white"),
+                ft.TextButton("Pedidos Realizados", icon=ft.icons.CHECK_CIRCLE, style=ft.ButtonStyle(color="#F2E8EC"), on_click=lambda e: mostrar_estatus_pedido()),
+                ft.ElevatedButton("Confirmar Pedido", on_click=lambda e: [cerrar_carrito(), confirmar_pedido()], bgcolor="#28A745", color="white"),
                 ft.ElevatedButton("Cerrar", on_click=lambda e: cerrar_carrito(), bgcolor="#E71790", color="white")
             ]
         )
@@ -116,65 +110,106 @@ def main(page: ft.Page):
         page.update()
     
     platillos = [
-        {"nombre": "Pizza Hawaiana", "imagen": "image/1.jpeg", "precio": 120, "ingredientes": ["Piña", "Jamón", "Queso"]},
-        {"nombre": "Hamburguesa BBQ", "imagen": "image/2.jpeg", "precio": 150, "ingredientes": ["Doble Carne", "Con Queso", "Extra Salsa BBQ", "Con Tocino", "Sin Lechuga y Jitomate", "Con Papas"]},
-        {"nombre": "Tacos al Pastor", "imagen": "image/3.jpeg", "precio": 100, "ingredientes": ["Pastor", "Cilantro", "Cebolla"]},
+        {
+            "nombre": "Pizza Hawaiana",
+            "imagen": "image/1.jpeg",
+            "precio": 120,
+            "ingredientes": ["Piña", "Jamón", "Queso"],
+            "descripcion": "Deliciosa pizza con salsa de tomate, queso derretido, jamón y piña sobre una base crujiente."
+        },
+        {
+            "nombre": "Hamburguesa BBQ",
+            "imagen": "image/2.jpeg",
+            "precio": 150,
+            "ingredientes": ["Doble Carne", "Con Queso", "Extra Salsa BBQ", "Con Tocino", "Sin Lechuga y Jitomate", "Con Papas"],
+            "descripcion": "Jugosa hamburguesa doble con queso, tocino y un toque especial de salsa BBQ."
+        },
+        {
+            "nombre": "Tacos al Pastor",
+            "imagen": "image/3.jpeg",
+            "precio": 100,
+            "ingredientes": ["Pastor", "Cilantro", "Cebolla"],
+            "descripcion": "Tradicionales tacos de pastor servidos con cebolla, cilantro y salsa al gusto."
+        }
     ]
     
     def agregar_al_carrito(e, platillo, ingredientes_seleccionados):
-        carrito.append({"nombre": platillo["nombre"], "precio": platillo["precio"], "ingredientes": ingredientes_seleccionados})
+        descripcion = f"{platillo['nombre']} - Ingredientes: {', '.join(ingredientes_seleccionados)}"
+        carrito.append({
+            "nombre": platillo["nombre"],
+            "precio": platillo["precio"],
+            "ingredientes": ingredientes_seleccionados,
+            "descripcion_completa": descripcion
+        })
         page.snack_bar = ft.SnackBar(content=ft.Text(f"{platillo['nombre']} agregado al carrito!"))
         page.snack_bar.open = True
-        mostrar_menu()
+        page.update()
+
 
     def confirmar_pedido():
+        global bd, cursor
+
         if not carrito:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("❌ No hay productos en el carrito."),
+                bgcolor="red"
+            )
+            page.snack_bar.open = True
+            page.update()
             return
 
-        fecha_actual = datetime.now().strftime("%Y-%m-%d")
-        hora_actual = datetime.now().strftime("%H:%M:%S")
-        descripcion_pedido = ", ".join([f"{p['nombre']} ({', '.join(p['ingredientes'])})" for p in carrito])
-        total_pedido = sum(p["precio"] for p in carrito)
-        usuario = "Roberto Empleado"
-        estatus = "Pedido Realizado"
-        numero_mesa = 1
-        id_cliente = 1
-
         try:
-            # Obtener o insertar estatus
+            fecha_actual = datetime.now().date()
+            hora_actual = datetime.now().strftime("%H:%M:%S")
+            estatus = "Pedido Realizado"
+            id_cliente = 1  # Cliente fijo
+            numero_mesa = 1  # Mesa fija o puedes hacerla dinámica
+
+            # Obtener ID del estatus desde la base de datos
             cursor.execute("SELECT IdEstatusPedido FROM estatuspedido WHERE SituacionPedido = %s", (estatus,))
             resultado = cursor.fetchone()
-            if resultado:
-                id_estatus_pedido = resultado[0]
-            else:
-                cursor.execute("INSERT INTO estatuspedido (SituacionPedido) VALUES (%s)", (estatus,))
-                bd.commit()
-                id_estatus_pedido = cursor.lastrowid
+            if not resultado:
+                raise Exception("No se encontró el estatus en la base de datos.")
+            id_estatus = resultado[0]
 
-            # Guardar pedido en la BD
-            for p in carrito:
+            # Insertar cada producto del carrito como un pedido individual
+            for producto in carrito:
+                descripcion_pedido = f"{producto['nombre']} (Ingredientes: {producto['descripcion_completa']})"
+
                 cursor.execute("""
-                    INSERT INTO generarpedido
+                    INSERT INTO generarpedido 
                     (HoraPedido, FechaPedido, Producto, NumeroMesa, Estatus, EstatusPedido_IdEstatusPedido, Clientes_Idcliente)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     hora_actual,
                     fecha_actual,
-                    f"{p['nombre']} ({', '.join(p['ingredientes'])})",
+                    descripcion_pedido,
                     numero_mesa,
                     estatus,
-                    id_estatus_pedido,
+                    id_estatus,
                     id_cliente
                 ))
-            bd.commit()
 
-            # Mostrar estatus con lo que se pidió
-            mostrar_estatus_pedido(fecha_actual, hora_actual, usuario, descripcion_pedido, total_pedido, estatus)
+            bd.commit()
+            carrito.clear()
+
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("✅ Pedido confirmado con éxito."),
+                bgcolor="#28A745"
+            )
+            page.snack_bar.open = True
+            mostrar_menu()
 
         except Exception as e:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"❌ Error al guardar el pedido: {str(e)}"))
+            print(f"❌ ERROR SQL: {e}")
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"❌ Error al guardar el pedido: {str(e)}"),
+                bgcolor="red"
+            )
             page.snack_bar.open = True
             page.update()
+
+
 
 
     # ✅ Función para cerrar el recibo
@@ -213,81 +248,82 @@ def main(page: ft.Page):
 
 
         
-    def mostrar_estatus_pedido(fecha=None, hora=None, usuario=None, descripcion=None, total=None, estatus=None):
+    def mostrar_estatus_pedido():
         carrito.clear()
         cerrar_carrito()
         page.clean()
 
-        if fecha and hora and usuario and descripcion and total and estatus:
-            # Mostrar solo el pedido confirmado
-            page.add(
-                ft.Column([
-                    ft.Text("📋 Estatus del Pedido", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
-                    ft.Divider(),
-                    ft.Container(
-                        content=ft.Column([
-                            ft.Text(f"📅 Fecha: {fecha}", size=18, color="white"),
-                            ft.Text(f"⏰ Hora: {hora}", size=18, color="white"),
-                            ft.Text(f"👤 Usuario: {usuario}", size=18, color="white"),
-                            ft.Text(f"📝 Descripción: {descripcion}", size=18, color="white"),
-                            ft.Text(f"💵 Total: ${total:.2f}", size=18, color="#E71790"),
-                            ft.Text(f"✅ Estatus: {estatus}", size=18, color="green"),
-                        ], spacing=10),
-                        padding=20,
-                        bgcolor="#2A2A2A",
-                        border_radius=10,
-                        width=400
-                    ),
-                    ft.ElevatedButton("Volver", on_click=lambda e: mostrar_menu(), bgcolor="#E71790", color="white")
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
-            )
-        else:
-            # Mostrar todos los pedidos registrados
-            try:
-                cursor.execute("""
-                    SELECT g.FechaPedido, g.HoraPedido, g.Producto, g.NumeroMesa, e.SituacionPedido 
-                    FROM generarpedido g
-                    JOIN estatuspedido e ON g.EstatusPedido_IdEstatusPedido = e.IdEstatusPedido
-                    ORDER BY g.FechaPedido DESC, g.HoraPedido DESC
-                """)
-                pedidos = cursor.fetchall()
+        try:
+            cursor.execute("""
+                SELECT g.IdGenerarPedido, g.FechaPedido, g.HoraPedido, g.Producto, g.NumeroMesa, e.SituacionPedido 
+                FROM generarpedido g
+                JOIN estatuspedido e ON g.EstatusPedido_IdEstatusPedido = e.IdEstatusPedido
+                ORDER BY g.IdGenerarPedido DESC
+            """)
+            pedidos = cursor.fetchall()
 
-                if not pedidos:
-                    page.snack_bar = ft.SnackBar(content=ft.Text("No hay pedidos registrados."))
-                    page.snack_bar.open = True
-                    page.update()
-                    return
-
-                lista = ft.Column([
-                    ft.Text("📋 Estatus de Pedidos", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
-                    ft.Divider()
-                ])
-
-                for p in pedidos:
-                    lista.controls.append(
-                        ft.Container(
-                            content=ft.Column([
-                                ft.Text(f"📅 Fecha: {p[0]}", size=16, color="white"),
-                                ft.Text(f"⏰ Hora: {p[1]}", size=16, color="white"),
-                                ft.Text(f"🍽️ Producto: {p[2]}", size=16, color="white"),
-                                ft.Text(f"🪑 Mesa: {p[3]}", size=16, color="white"),
-                                ft.Text(f"✅ Estatus: {p[4]}", size=16, color="#4CAF50"),
-                            ], spacing=5),
-                            padding=10,
-                            bgcolor="#2A2A2A",
-                            border_radius=10,
-                            margin=ft.margin.only(bottom=10)
-                        )
-                    )
-
-                lista.controls.append(ft.ElevatedButton("Volver", on_click=lambda e: mostrar_menu(), bgcolor="#5D0E41", color="white"))
-
-                page.add(lista)
-
-            except Exception as e:
-                page.snack_bar = ft.SnackBar(content=ft.Text(f"Error al obtener pedidos: {e}"))
+            if not pedidos:
+                page.snack_bar = ft.SnackBar(content=ft.Text("No hay pedidos registrados."))
                 page.snack_bar.open = True
                 page.update()
+                return
+
+            lista = ft.Column([
+                ft.Row([
+                    ft.IconButton(ft.icons.ARROW_BACK, icon_color="#AED2FF", on_click=lambda e: mostrar_menu()),
+                    ft.Text("Pedidos Realizados", size=30, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ]),
+                ft.Text(
+                    "📋 Aquí puedes consultar todos los pedidos realizados junto con su estado actual.",
+                    size=16,
+                    color="white"
+                ),
+                ft.Divider()
+            ], scroll=ft.ScrollMode.ALWAYS)
+
+            for p in pedidos:
+                producto = p[3]
+                if "Ingredientes:" in producto:
+                    platillo, ingredientes = producto.split("Ingredientes:", 1)
+                    producto_formateado = f"{platillo.strip()}\n🧂 Ingredientes:\n{ingredientes.strip()}"
+                else:
+                    producto_formateado = producto
+
+                lista.controls.append(
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text(f"🧾 Orden N.º {p[0]}", size=16, color="#E71790"),
+                            ft.Text(f"📅 Fecha: {p[1]}", size=16, color="white"),
+                            ft.Text(f"⏰ Hora: {p[2]}", size=16, color="white"),
+                            ft.Text(f"🍽️ Producto: {producto_formateado}", color="white", size=16),
+                            ft.Text(f"🪑 Mesa: {p[4]}", size=16, color="white"),
+                            ft.Text(f"✅ Estatus: {p[5]}", size=16, color="#4CAF50"),
+                        ], spacing=5),
+                        padding=10,
+                        bgcolor="#2A2A2A",
+                        border_radius=10,
+                        margin=ft.margin.only(bottom=10)
+                    )
+                )
+
+
+            page.add(ft.Container(expand=True, content=lista, padding=20))
+
+        except Exception as e:
+            page.snack_bar = ft.SnackBar(content=ft.Text(f"Error al obtener pedidos: {e}"))
+            page.snack_bar.open = True
+            contenido_pedidos = ft.Column(
+                scroll="auto",  
+            )
+
+            page.controls.clear()
+            page.add(
+                contenido_pedidos
+            )
+            page.update()
+
+
+
 
 
     def mostrar_detalle(e, platillo):
@@ -327,9 +363,11 @@ def main(page: ft.Page):
                             [
                                 ft.Row([
                                     ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e: mostrar_menu()),
-                                    ft.Text(platillo["nombre"], size=26, weight=ft.FontWeight.BOLD, color="#E71790")
-                                ]),
+                                    ft.Text(platillo["nombre"], size=26, weight=ft.FontWeight.BOLD, color="#E71790"),
+
+                            ]),
                                 ft.Image(src=platillo["imagen"], width=320, height=220, border_radius=10),
+                                ft.Text(platillo["descripcion"], size=14, color="#CCCCCC", italic=True),
                                 ft.Text(f"Precio: ${platillo['precio']}", size=20, color="#F2E8EC"),
                                 ft.Text("Ingredientes:", size=18, color="#E71790"),
                                 ft.Column(checkboxes_ingredientes, spacing=5),
@@ -366,7 +404,6 @@ def main(page: ft.Page):
 
 
 
-    
     def mostrar_menu():
         page.clean()
         lista_platillos = ft.GridView(
