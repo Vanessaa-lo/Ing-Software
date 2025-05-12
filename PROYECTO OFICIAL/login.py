@@ -1,8 +1,39 @@
+
 import flet as ft
 import mysql.connector
 import subprocess
 import os
+import re
+import hashlib
 from db_config import conectar_bd
+from flet import Animation as anim
+
+
+def validar_email(email):
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def limitar_telefono(e, field):
+    valor = ''.join(filter(str.isdigit, field.value))
+    field.value = valor
+    if len(valor) < 10:
+        field.error_text = "Teléfono inválido: se requieren 10 dígitos"
+    elif len(valor) > 10:
+        field.error_text = "Teléfono inválido: máximo 10 dígitos"
+    else:
+        field.error_text = ""
+    e.page.update()
+
+def limitar_contraseña(e, field):
+    if len(field.value) > 20:
+        field.value = field.value[:20]
+        field.error_text = "Máximo 20 caracteres"
+    else:
+        field.error_text = ""
+    e.page.update()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def main(page: ft.Page):
     page.title = "Inicio de Sesión"
@@ -14,200 +45,219 @@ def main(page: ft.Page):
         bgcolor="#62003c",
         padding=15,
         alignment=ft.alignment.center_left,
-        animate=ft.animation.Animation(400, "ease_in_out")
+        animate=ft.Animation(400, "ease_in_out")
     )
+
+    def mostrar_mensaje(texto, color):
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text(texto, color="white"),
+            bgcolor="#4CAF50" if color == "verde" else "#F44336",
+            duration=3000
+        )
+        page.snack_bar.open = True
+        page.update()
 
     def iniciar_sesion(e):
         NombreUsuario = login_username.value.strip()
         Contraseña = login_password.value.strip()
-
         if not NombreUsuario or not Contraseña:
-            page.snack_bar = ft.SnackBar(content=ft.Text("Todos los campos son obligatorios."))
-            page.snack_bar.open = True
-            page.update()
+            mostrar_mensaje("Todos los campos son obligatorios", "rojo")
             return
 
-        conn = conectar_bd()
-        cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT * FROM Usuario WHERE NombreUsuario = %s AND Contraseña = %s", (NombreUsuario, Contraseña))
+            conn = conectar_bd()
+            print("Conexión exitosa a la base de datos")
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM Usuario WHERE NombreUsuario = %s AND Contraseña = %s",
+                           (NombreUsuario, hash_password(Contraseña)))
             usuario = cursor.fetchone()
             if usuario:
-                page.snack_bar = ft.SnackBar(content=ft.Text("Inicio de sesión exitoso!"))
-                page.snack_bar.open = True
-                page.update()
-                subprocess.Popen(["python", "main.py"])
-                os._exit(0)  # Cierra esta ventana
+                mostrar_mensaje("Inicio de sesión exitoso!", "verde")
+                tipo_usuario = obtener_tipo_usuario(NombreUsuario)
+
+                if tipo_usuario == "Empleado":
+                    subprocess.Popen(["python", "main.py", f"--username={NombreUsuario}", f"--tipo={tipo_usuario}"])
+                elif tipo_usuario == "Cliente":
+                    subprocess.Popen(["python", "menu.py", f"--username={NombreUsuario}", f"--tipo={tipo_usuario}"])
+                else:
+                    mostrar_mensaje("Tipo de usuario desconocido", "rojo")
+                    return
+                os._exit(0)
             else:
-                page.snack_bar = ft.SnackBar(content=ft.Text("Usuario o contraseña incorrectos"))
-                page.snack_bar.open = True
+                mostrar_mensaje("Usuario o contraseña incorrectos", "rojo")
         except mysql.connector.Error as err:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Error en la base de datos: {err}"))
-            page.snack_bar.open = True
+            print(f"Error en la base de datos: {err}")
+            mostrar_mensaje(f"Error de conexión: {err}", "rojo")
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+                
+    def obtener_tipo_usuario(nombre_usuario):
+        conn = conectar_bd()
+        cursor = conn.cursor()
+
+        try:
+            # Verificar si es Empleado
+            cursor.execute("""
+                SELECT e.IdEmpleado 
+                FROM Empleado e
+                JOIN Usuario u ON e.Usuario_IdUsuario = u.IdUsuario
+                WHERE u.NombreUsuario = %s
+            """, (nombre_usuario,))
+            if cursor.fetchone():
+                return "Empleado"
+
+            # Verificar si es Cliente
+            cursor.execute("""
+                SELECT c.IdCliente
+                FROM Cliente c
+                JOIN Usuario u ON c.Usuario_IdUsuario = u.IdUsuario
+                WHERE u.NombreUsuario = %s
+            """, (nombre_usuario,))
+            if cursor.fetchone():
+                return "Cliente"
+
+            return "Desconocido"
+
         finally:
             cursor.close()
             conn.close()
-            page.update()
+
 
     def toggle_password_visibility(e):
         login_password.password = not login_password.password
         eye_icon.icon = "visibility_off" if login_password.password else "visibility"
         page.update()
 
-    def toggle_password_visibility_field(e, password_field, eye_icon):
-        password_field.password = not password_field.password
-        eye_icon.icon = "visibility_off" if password_field.password else "visibility"
-        page.update()
+    def volver_al_login(e=None):
+        login_username.value = ""
+        login_password.value = ""
+        page.clean()
+        page.add(header)
+        page.add(ft.Container(content=login_section, alignment=ft.alignment.center))
 
-    def seleccionar_tipo_usuario(e):
+    def seleccionar_tipo_usuario(e=None):
         page.clean()
         page.add(header)
         page.add(
             ft.Container(
                 content=ft.Column([
                     ft.Text("Selecciona el tipo de usuario", size=24, weight=ft.FontWeight.BOLD, color="white"),
-                    ft.ElevatedButton("Cliente", on_click=registro_cliente, bgcolor="#e10080", color="white"),
-                    ft.ElevatedButton("Empleado", on_click=registro_empleado, bgcolor="#e10080", color="white"),
+                    ft.ElevatedButton("Cliente", on_click=lambda e: registro_usuario("cliente"), bgcolor="#e10080", color="white"),
+                    ft.ElevatedButton("Empleado", on_click=lambda e: registro_usuario("empleado"), bgcolor="#e10080", color="white"),
                     ft.ElevatedButton("Volver", on_click=volver_al_login, bgcolor="#62003c", color="white")
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                 padding=20,
                 bgcolor="#000000",
                 border_radius=15,
                 shadow=ft.BoxShadow(blur_radius=15, spread_radius=2, color="#444"),
-                animate=ft.animation.Animation(400, "ease_in_out")
+                animate=ft.Animation(400, "ease_in_out")
             )
         )
 
-    def registro_cliente(e):
-        eye_icon_client = ft.IconButton(icon="visibility", on_click=lambda e: toggle_password_visibility_field(e, register_client_password, eye_icon_client))
+    def registro_usuario(tipo):
+        campos = {
+            "nombre": ft.TextField(label=f"Nombre {tipo.title()}", width=300),
+            "apellido": ft.TextField(label=f"Apellido {tipo.title()}", width=300),
+            "telefono": ft.TextField(label=f"Teléfono {tipo.title()}", width=300, hint_text="10 dígitos"),
+            "correo": ft.TextField(label=f"Correo {tipo.title()}", width=300, hint_text="ejemplo@email.com"),
+            "usuario": ft.TextField(label="Nombre de Usuario", width=300),
+            "contraseña": ft.TextField(label="Contraseña", width=300, password=True)
+        }
+
+        campos['telefono'].on_change = lambda e: limitar_telefono(e, campos['telefono'])
+        campos['contraseña'].suffix = ft.IconButton(icon="visibility", on_click=lambda e: toggle_password(campos['contraseña'], e))
+
+        def toggle_password(field, e):
+            field.password = not field.password
+            e.control.icon = "visibility_off" if field.password else "visibility"
+            page.update()
+
+        def guardar_usuario(e):
+            error = False
+            for key, campo in campos.items():
+                if not campo.value.strip():
+                    campo.error_text = "Este campo es obligatorio"
+                    error = True
+                else:
+                    campo.error_text = ""
+
+            if not validar_email(campos['correo'].value):
+                campos['correo'].error_text = "Correo inválido"
+                error = True
+
+            if len(campos['telefono'].value) != 10:
+                campos['telefono'].error_text = "Teléfono inválido: se requieren 10 dígitos"
+                error = True
+
+            page.update()
+            if error:
+                return
+
+            try:
+                conn = conectar_bd()
+                print("Conexión exitosa a la base de datos")
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM Usuario WHERE NombreUsuario = %s", (campos['usuario'].value,))
+                if cursor.fetchone():
+                    campos['usuario'].error_text = "Nombre de usuario ya existe"
+                    page.update()
+                    return
+
+                cursor.execute("SELECT 1 FROM Cliente WHERE Correo = %s UNION SELECT 1 FROM Empleado WHERE Correo = %s",
+                               (campos['correo'].value, campos['correo'].value))
+                if cursor.fetchone():
+                    campos['correo'].error_text = "Este correo ya está registrado"
+                    page.update()
+                    return
+
+                cursor.execute("INSERT INTO Usuario (NombreUsuario, Contraseña) VALUES (%s, %s)",
+                               (campos['usuario'].value, hash_password(campos['contraseña'].value)))
+                id_usuario = cursor.lastrowid
+
+                if tipo == "cliente":
+                    cursor.execute("INSERT INTO Cliente (Nombre, Apellido, Telefono, Correo, Usuario_IdUsuario) VALUES (%s, %s, %s, %s, %s)",
+                                   (campos['nombre'].value, campos['apellido'].value, campos['telefono'].value, campos['correo'].value, id_usuario))
+                else:
+                    cursor.execute("INSERT INTO Empleado (Nombre, Apellido, Telefono, Correo, Usuario_IdUsuario) VALUES (%s, %s, %s, %s, %s)",
+                                   (campos['nombre'].value, campos['apellido'].value, campos['telefono'].value, campos['correo'].value, id_usuario))
+
+                conn.commit()
+                mostrar_mensaje(f"{tipo.title()} registrado correctamente!", "verde")
+                volver_al_login()
+
+            except mysql.connector.Error as err:
+                print(f"Error en la base de datos: {err}")
+                mostrar_mensaje(f"Error en la base de datos: {err}", "rojo")
+            finally:
+                if 'cursor' in locals():
+                    cursor.close()
+                if 'conn' in locals():
+                    conn.close()
+
         page.clean()
         page.add(header)
         page.add(
             ft.Container(
                 content=ft.Column([
-                    ft.Text("Registro de Cliente", size=24, weight=ft.FontWeight.BOLD, color="white"),
-                    register_client_name,
-                    register_client_lastname,
-                    register_client_phone,
-                    register_client_email,
-                    register_client_username,
-                    ft.Row([register_client_password, eye_icon_client]),
-                    ft.ElevatedButton("Registrar Cliente", on_click=guardar_cliente, bgcolor="#e10080", color="white"),
+                    ft.Text(f"Registro de {tipo.title()}", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                    *campos.values(),
+                    ft.ElevatedButton("Registrar", on_click=guardar_usuario, bgcolor="#e10080", color="white"),
                     ft.ElevatedButton("Volver", on_click=seleccionar_tipo_usuario, bgcolor="#62003c", color="white")
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                 padding=20,
                 bgcolor="#000000",
                 border_radius=15,
                 shadow=ft.BoxShadow(blur_radius=15, spread_radius=2, color="#444"),
-                animate=ft.animation.Animation(400, "ease_in_out")
+                animate=ft.Animation(400, "ease_in_out")
             )
         )
 
-    def registro_empleado(e):
-        eye_icon_employee = ft.IconButton(icon="visibility", on_click=lambda e: toggle_password_visibility_field(e, register_employee_password, eye_icon_employee))
-        page.clean()
-        page.add(header)
-        page.add(
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("Registro de Empleado", size=24, weight=ft.FontWeight.BOLD, color="white"),
-                    register_employee_name,
-                    register_employee_lastname,
-                    register_employee_phone,
-                    register_employee_email,
-                    register_employee_username,
-                    ft.Row([register_employee_password, eye_icon_employee]),
-                    ft.ElevatedButton("Registrar Empleado", on_click=guardar_empleado, bgcolor="#e10080", color="white"),
-                    ft.ElevatedButton("Volver", on_click=seleccionar_tipo_usuario, bgcolor="#62003c", color="white")
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
-                padding=20,
-                bgcolor="#000000",
-                border_radius=15,
-                shadow=ft.BoxShadow(blur_radius=15, spread_radius=2, color="#444"),
-                animate=ft.animation.Animation(400, "ease_in_out")
-            )
-        )
-
-    def guardar_cliente(e):
-        NombreUsuario = register_client_username.value.strip()
-        Contraseña = register_client_password.value.strip()
-        Nombre = register_client_name.value.strip()
-        Apellido = register_client_lastname.value.strip()
-        Telefono = register_client_phone.value.strip()
-        Correo = register_client_email.value.strip()
-
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("INSERT INTO Usuario (NombreUsuario, Contraseña) VALUES (%s, %s)", (NombreUsuario, Contraseña))
-            user_id = cursor.lastrowid
-            cursor.execute("INSERT INTO Cliente (Nombre, Apellido, Telefono, Correo, Usuario_IdUsuario) VALUES (%s, %s, %s, %s, %s)",
-                           (Nombre, Apellido, Telefono, Correo, user_id))
-            conn.commit()
-            page.snack_bar = ft.SnackBar(content=ft.Text("Cliente registrado correctamente!"))
-            page.snack_bar.open = True
-            volver_al_login(None)
-        except mysql.connector.Error as err:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Error en la base de datos: {err}"))
-            page.snack_bar.open = True
-        finally:
-            cursor.close()
-            conn.close()
-            page.update()
-
-    def guardar_empleado(e):
-        NombreUsuario = register_employee_username.value.strip()
-        Contraseña = register_employee_password.value.strip()
-        Nombre = register_employee_name.value.strip()
-        Apellido = register_employee_lastname.value.strip()
-        Telefono = register_employee_phone.value.strip()
-        Correo = register_employee_email.value.strip()
-
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("INSERT INTO Usuario (NombreUsuario, Contraseña) VALUES (%s, %s)", (NombreUsuario, Contraseña))
-            user_id = cursor.lastrowid
-            cursor.execute("INSERT INTO Empleado (Nombre, Apellido, Telefono, Correo, Usuario_IdUsuario) VALUES (%s, %s, %s, %s, %s)",
-                           (Nombre, Apellido, Telefono, Correo, user_id))
-            conn.commit()
-            page.snack_bar = ft.SnackBar(content=ft.Text("Empleado registrado correctamente!"))
-            page.snack_bar.open = True
-            volver_al_login(None)
-        except mysql.connector.Error as err:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Error en la base de datos: {err}"))
-            page.snack_bar.open = True
-        finally:
-            cursor.close()
-            conn.close()
-            page.update()
-
-    def volver_al_login(e):
-        page.clean()
-        page.add(header)
-        page.add(ft.Container(content=login_section, alignment=ft.alignment.center))
-
-    # --- Campos para login
-    login_username = ft.TextField(
-        label="Usuario",
-        width=300,
-        bgcolor="#333",
-        color="white",
-        prefix_icon=ft.icons.PERSON,
-        border_radius=10
-    )
-
+    login_username = ft.TextField(label="Usuario", width=300, bgcolor="#333", color="white", prefix_icon=ft.Icons.PERSON, border_radius=10)
     eye_icon = ft.IconButton(icon="visibility", on_click=toggle_password_visibility)
-    login_password = ft.TextField(
-        label="Contraseña",
-        width=300,
-        password=True,
-        bgcolor="#333",
-        color="white",
-        prefix_icon=ft.icons.LOCK,
-        border_radius=10,
-        suffix=eye_icon
-    )
+    login_password = ft.TextField(label="Contraseña", width=300, password=True, bgcolor="#333", color="white", prefix_icon=ft.Icons.LOCK, border_radius=10, suffix=eye_icon)
 
     login_section = ft.Container(
         content=ft.Column([
@@ -215,30 +265,15 @@ def main(page: ft.Page):
             login_username,
             login_password,
             ft.ElevatedButton("Iniciar Sesión", on_click=iniciar_sesion, bgcolor="#e10080", color="white"),
-            ft.ElevatedButton("Registrarse", on_click=seleccionar_tipo_usuario, bgcolor="#62003c", color="white")
+            ft.ElevatedButton("Registrarse", on_click=lambda e: seleccionar_tipo_usuario(), bgcolor="#62003c", color="white")
         ], alignment=ft.MainAxisAlignment.CENTER),
         padding=20,
         bgcolor="#000000",
         border_radius=15,
         shadow=ft.BoxShadow(blur_radius=15, spread_radius=2, color="#444"),
-        animate=ft.animation.Animation(400, "ease_in_out")
+        animate=ft.Animation(400, "ease_in_out")
     )
 
-    # --- Campos para registro
-    register_client_name = ft.TextField(label="Nombre Cliente", width=300)
-    register_client_lastname = ft.TextField(label="Apellido Cliente", width=300)
-    register_client_phone = ft.TextField(label="Teléfono Cliente", width=300)
-    register_client_email = ft.TextField(label="Correo Cliente", width=300)
-    register_client_username = ft.TextField(label="Nombre de Usuario", width=300)
-    register_client_password = ft.TextField(label="Contraseña", width=300, password=True)
-
-    register_employee_name = ft.TextField(label="Nombre Empleado", width=300)
-    register_employee_lastname = ft.TextField(label="Apellido Empleado", width=300)
-    register_employee_phone = ft.TextField(label="Teléfono Empleado", width=300)
-    register_employee_email = ft.TextField(label="Correo Empleado", width=300)
-    register_employee_username = ft.TextField(label="Nombre de Usuario", width=300)
-    register_employee_password = ft.TextField(label="Contraseña", width=300, password=True)
-
-    volver_al_login(None)
+    volver_al_login()
 
 ft.app(target=main)
