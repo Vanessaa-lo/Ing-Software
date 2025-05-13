@@ -62,16 +62,8 @@ def main(page: ft.Page):
             "cantidad": cantidad,
             "observaciones": observaciones
         })
-        platillos_agregados.controls.append(
-            ft.Row(
-                [
-                    ft.Text(f"{platillo} - Cantidad: {cantidad} - Observaciones: {observaciones}", color="#F2E8EC"),
-                    ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: eliminar_platillo(e, idx), icon_color="#FF0000"),
-                    ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=len(comanda_data["platillos"]) - 1: editar_platillo(e, idx), icon_color="#4CAF50")
-                ],
-                alignment=ft.MainAxisAlignment.START
-            )
-        )
+        actualizar_vista_platillos()
+
         platillo_input.value = ""
         cantidad_input.value = ""
         observaciones_input.value = ""
@@ -162,6 +154,7 @@ def main(page: ft.Page):
             precio_unitario = 50.0
             subtotal = sum(int(p["cantidad"]) * precio_unitario for p in comanda_data["platillos"])
             impuesto = subtotal * 0.16
+            descuento = 0.0
             total = subtotal + impuesto
 
             cursor.execute(
@@ -259,26 +252,15 @@ def main(page: ft.Page):
                                     [estado_dropdown],
                                     alignment="start"
                                 ),
-                                ft.Row(
-                                    [
-                                        ft.ElevatedButton(
-                                            "🗑 Borrar",
-                                            on_click=lambda e, idx=idx: borrar_comanda(e, idx),
-                                            bgcolor="#E53935",
-                                            color="white",
-                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                        ),
-                                        ft.ElevatedButton(
-                                            "✏️ Modificar",
-                                            on_click=lambda e, idx=idx: modificar_comanda(e, idx),
-                                            bgcolor="#43A047",
-                                            color="white",
-                                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                        )
-                                    ],
-                                    alignment="end",
-                                    spacing=10
-                                )
+                            ft.Row(
+                                [
+                                    crear_boton_borrar(idx),
+                                    crear_boton_modificar(idx)
+                                ],
+                                alignment="end",
+                                spacing=10
+                            )
+
                             ],
                             spacing=10
                         ),
@@ -303,12 +285,15 @@ def main(page: ft.Page):
         page.update()
 
     def borrar_comanda(e, idx):
-        def confirmar_borrado(e):
-            del comandas_realizadas[idx]
-            mostrar_comandas_realizadas(e)
-            page.snack_bar = ft.SnackBar(ft.Text("✅ Comanda eliminada.", color="white"), bgcolor="green")
-            page.snack_bar.open = True
-            page.update()
+        comanda_a_eliminar = comandas_realizadas[idx]
+
+        def confirmar_borrado(ev):
+            if comanda_a_eliminar in comandas_realizadas:
+                comandas_realizadas.remove(comanda_a_eliminar)
+                mostrar_comandas_realizadas(ev)
+                page.snack_bar = ft.SnackBar(ft.Text("✅ Comanda eliminada.", color="white"), bgcolor="green")
+                page.snack_bar.open = True
+                page.update()
 
         page.snack_bar = ft.SnackBar(
             content=ft.Row([
@@ -320,6 +305,8 @@ def main(page: ft.Page):
         )
         page.snack_bar.open = True
         page.update()
+
+
 
     def modificar_comanda(e, idx):
         comanda = comandas_realizadas[idx]
@@ -344,42 +331,36 @@ def main(page: ft.Page):
         comandas_realizadas.pop(idx)
         page.update()
 
-    def eliminar_platillo(e, idx):
-        del comanda_data["platillos"][idx]
+    def eliminar_platillo(e, platillo_id):
+        comanda_data["platillos"] = [p for p in comanda_data["platillos"] if p["id"] != platillo_id]
+        actualizar_vista_platillos()
+
+
+    def editar_platillo(e, platillo_id):
+        platillo = next((p for p in comanda_data["platillos"] if p["id"] == platillo_id), None)
+        if platillo:
+            platillo_input.value = platillo['platillo']
+            cantidad_input.value = platillo['cantidad']
+            observaciones_input.value = platillo['observaciones']
+            comanda_data["platillos"] = [p for p in comanda_data["platillos"] if p["id"] != platillo_id]
+            actualizar_vista_platillos()
+            
+    def actualizar_vista_platillos():
         platillos_agregados.controls.clear()
-        for platillo in comanda_data["platillos"]:
+        for p in comanda_data["platillos"]:
             platillos_agregados.controls.append(
                 ft.Row(
                     [
-                        ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=platillo["id"]: eliminar_platillo(e, idx), icon_color="#FF0000"),
-                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=platillo["id"]: editar_platillo(e, idx), icon_color="#4CAF50")
+                        ft.Text(f"{p['platillo']} - Cantidad: {p['cantidad']} - Observaciones: {p['observaciones']}", color="#F2E8EC"),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, pid=p["id"]: eliminar_platillo(e, pid), icon_color="#FF0000"),
+                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, pid=p["id"]: editar_platillo(e, pid), icon_color="#4CAF50")
                     ],
                     alignment=ft.MainAxisAlignment.START
                 )
             )
         page.update()
 
-    def editar_platillo(e, idx):
-        platillo = comanda_data["platillos"][idx]
-        platillo_input.value = platillo['platillo']
-        cantidad_input.value = platillo['cantidad']
-        observaciones_input.value = platillo['observaciones']
 
-        del comanda_data["platillos"][idx]
-        platillos_agregados.controls.clear()
-        for platillo in comanda_data["platillos"]:
-            platillos_agregados.controls.append(
-                ft.Row(
-                    [
-                        ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, idx=platillo["id"]: eliminar_platillo(e, idx), icon_color="#FF0000"),
-                        ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, idx=platillo["id"]: editar_platillo(e, idx), icon_color="#4CAF50")
-                    ],
-                    alignment=ft.MainAxisAlignment.START
-                )
-            )
-        page.update()
 
     def validar_dropdown():
         if not numero_mesa_dropdown.value or not numero_comensales_dropdown.value:
@@ -434,6 +415,25 @@ def main(page: ft.Page):
     page.end_drawer = comandas_drawer
 
     comanda_numero_text = ft.Text(f"Comanda # {comanda_data['numero_comanda']}", size=20, weight=ft.FontWeight.BOLD, color="#E71790")
+    
+    def crear_boton_borrar(idx):
+        return ft.ElevatedButton(
+            "🗑 Borrar",
+            on_click=lambda e: borrar_comanda(e, idx),
+            bgcolor="#E53935",
+            color="white",
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+        )
+
+    def crear_boton_modificar(idx):
+        return ft.ElevatedButton(
+            "✏️ Modificar",
+            on_click=lambda e: modificar_comanda(e, idx),
+            bgcolor="#43A047",
+            color="white",
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+        )
+
 
     page.add(
         comanda_numero_text,
