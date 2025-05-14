@@ -2,11 +2,10 @@ import flet as ft
 from datetime import datetime
 import os
 import subprocess
-import uuid
 from copy import deepcopy
 from functools import partial
 from db_config import conectar_bd
-import mysql.connector 
+
 
 usuario_actual = "Roberto Empleado"
 
@@ -42,7 +41,6 @@ def main(page: ft.Page):
     page.padding = 20
 
     comanda_data = {
-        "id": str(uuid.uuid4()),
         "numero_comanda": 1,
         "fecha_hora": "",
         "nombre_mesero": "Roberto",
@@ -108,15 +106,16 @@ def main(page: ft.Page):
 
     def actualizar_vista_platillos():
         platillos_agregados.controls.clear()
-        for platillo in comanda_data["platillos"]:
+        for index, platillo in enumerate(comanda_data["platillos"]):
             platillos_agregados.controls.append(
                 ft.Row([
                     ft.Text(f"{platillo['platillo']} - Cantidad: {platillo['cantidad']} - Observaciones: {platillo['observaciones']}", color="#F2E8EC"),
-                    ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, pid=platillo["id"]: eliminar_platillo(e, pid), icon_color="#FF0000"),
-                    ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, pid=platillo["id"]: editar_platillo(e, pid), icon_color="#4CAF50")
+                    ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, i=index: eliminar_platillo(e, i), icon_color="#FF0000"),
+                    ft.IconButton(icon=ft.icons.EDIT, on_click=lambda e, i=index: editar_platillo(e, i), icon_color="#4CAF50")
                 ], alignment=ft.MainAxisAlignment.START)
             )
         page.update()
+
 
     def agregar_platillo(e):
         btn_agregar_platillo.disabled = True
@@ -135,33 +134,36 @@ def main(page: ft.Page):
 
         if platillo and cantidad:
             comanda_data["platillos"].append({
-                "id": str(uuid.uuid4()),
                 "platillo": platillo,
                 "cantidad": cantidad,
                 "observaciones": observaciones
             })
+
             actualizar_vista_platillos()
             platillo_input.value = ""
             cantidad_input.value = ""
             observaciones_input.value = ""
             vista_prev_platillo.content = None
 
+
         btn_agregar_platillo.disabled = False
         page.update()
 
-    def eliminar_platillo(e, platillo_id):
-        comanda_data["platillos"] = [p for p in comanda_data["platillos"] if p["id"] != platillo_id]
-        actualizar_vista_platillos()
+    def eliminar_platillo(e, index):
+        if 0 <= index < len(comanda_data["platillos"]):
+            del comanda_data["platillos"][index]
+            actualizar_vista_platillos()
 
-    def editar_platillo(e, platillo_id):
-        for i, platillo in enumerate(comanda_data["platillos"]):
-            if platillo["id"] == platillo_id:
-                platillo_input.value = platillo['platillo']
-                cantidad_input.value = platillo['cantidad']
-                observaciones_input.value = platillo['observaciones']
-                del comanda_data["platillos"][i]
-                break
-        actualizar_vista_platillos()
+
+    def editar_platillo(e, index):
+        if 0 <= index < len(comanda_data["platillos"]):
+            platillo = comanda_data["platillos"][index]
+            platillo_input.value = platillo['platillo']
+            cantidad_input.value = platillo['cantidad']
+            observaciones_input.value = platillo['observaciones']
+            del comanda_data["platillos"][index]
+            actualizar_vista_platillos()
+
 
     def generar_comanda(e):
         if not comanda_data["platillos"]:
@@ -170,120 +172,116 @@ def main(page: ft.Page):
         btn_generar_comanda.disabled = True
         page.update()
 
-        try:
-            conexion = conectar_bd()
-            cursor = conexion.cursor()
+        # ✅ Validación de selección de mesa y comensales
+        if not numero_mesa_dropdown.value or not numero_comensales_dropdown.value:
+            page.snack_bar = ft.SnackBar(ft.Text("❗ Selecciona mesa y comensales.", color="white"), bgcolor="red")
+            page.snack_bar.open = True
+            btn_generar_comanda.disabled = False
+            page.update()
+            return
 
-            # Insertar en comandas
-            fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute(
-                "INSERT INTO comandas (fecha_hora, mesero, numero_mesa, numero_comensales, estado) VALUES (%s, %s, %s, %s, %s)",
-                (fecha_hora, comanda_data["nombre_mesero"], comanda_data["numero_mesa"], comanda_data["numero_comensales"], comanda_data["estado"])
-            )
-            comanda_id = cursor.lastrowid
+        # ✅ Validación de mesa activa (solo permitir si última comanda fue "Entregado")
+        mesa_actual = int(numero_mesa_dropdown.value)
+        mesa_en_uso = any(
+            c["numero_mesa"] == mesa_actual and c["estado"] != "Entregado"
+            for c in comandas_realizadas
+        )
+        if mesa_en_uso:
+            page.snack_bar = ft.SnackBar(ft.Text("❗ Esta mesa ya tiene una comanda activa sin entregar.", color="white"), bgcolor="red")
+            page.snack_bar.open = True
+            btn_generar_comanda.disabled = False
+            page.update()
+            return
 
-            # Insertar platillos en platillos_comanda
-            for p in comanda_data["platillos"]:
-                cursor.execute(
-                    "INSERT INTO platillos_comanda (comanda_id, nombre, cantidad, observaciones) VALUES (%s, %s, %s, %s)",
-                    (comanda_id, p["platillo"], int(p["cantidad"]), p["observaciones"])
-                )
+        # ✅ Asignación segura de datos
+        comanda_data["fecha_hora"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        comanda_data["numero_mesa"] = mesa_actual
+        comanda_data["numero_comensales"] = int(numero_comensales_dropdown.value)
 
-            # Insertar en generarpedido
-            cursor.execute("SELECT IdEstatusPedido FROM estatuspedido WHERE SituacionPedido = %s", (estatus,))
-            resultado = cursor.fetchone()
-            if not resultado:
-                raise Exception("❌ No se encontró el estatus 'En preparación' en la tabla estatuspedido.")
-            id_estatus = resultado[0]
-
-            # Insertar cada platillo como un pedido individual
-            pedido_ids = []
-            for platillo in comanda_data["platillos"]:
-                descripcion = f"{platillo['platillo']} (Obs: {platillo['observaciones']})"
-                cursor.execute(
-                    "INSERT INTO generarpedido (HoraPedido, FechaPedido, Producto, NumeroMesa, Estatus, EstatusPedido_IdEstatusPedido, Clientes_Idcliente) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                    (hora, fecha, descripcion, comanda_data["numero_mesa"], estatus, id_estatus, 1)
-                )
-                pedido_ids.append(cursor.lastrowid)  # Guarda todos los IDs de pedido generados
-
-            # Insertar en comandapedido
-            cursor.execute(
-                "INSERT INTO comandapedido (GenerarPedido_IdGenerarPedido, GenerarComanda) VALUES (%s, %s)",
-                (pedido_id, str(comanda_id))  # Convertimos a string si es int
-            )
-
-
-            # 1. Datos de fecha, hora y total
-            fecha = datetime.now().strftime("%Y-%m-%d")
-            hora = datetime.now().strftime("%H:%M:%S")
-            total = sum(
-                int(p["cantidad"]) * (120 if p["platillo"] == "Pizza Hawaiana" else 150 if p["platillo"] == "Hamburguesa BBQ" else 100)
-                for p in comanda_data["platillos"]
-            )
-            detalle = f"Total: ${total}"
-
-            # 2. Insertar en la tabla ventas
-            cursor.execute(
-                "INSERT INTO ventas (Hora, FechaVenta, DetalleVenta, CorteCaja_idCorteCaja) VALUES (%s, %s, %s, %s)",
-                (hora, fecha, detalle, 1)  # ← Asumimos corte de caja ID 1
-            )
-            venta_id = cursor.lastrowid
-
-            # 3. Insertar en la tabla generarrecibo
-            cursor.execute(
-                "INSERT INTO generarrecibo (FechaRecibo, HoraRecibo, descripcion, Ventas_IdVentas) VALUES (%s, %s, %s, %s)",
-                (fecha, hora, detalle, venta_id)
-            )
-
-
-
-            conexion.commit()
-            conexion.close()
-
-        except Exception as ex:
-            print("❌ Error al guardar en base de datos:", ex)
-
-        comanda_data["fecha_hora"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         comanda_data_copy = deepcopy(comanda_data)
-        comanda_data_copy["id"] = str(uuid.uuid4())
+
+        try:
+            conn = conectar_bd()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO comandas (fecha_hora, mesero, numero_mesa, numero_comensales, estado)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                comanda_data_copy["fecha_hora"],
+                comanda_data_copy["nombre_mesero"],
+                comanda_data_copy["numero_mesa"],
+                comanda_data_copy["numero_comensales"],
+                comanda_data_copy["estado"]
+            ))
+
+            comanda_id_insertada = cursor.lastrowid
+            comanda_data_copy["id"] = comanda_id_insertada
+            comanda_data_copy["numero_comanda"] = comanda_id_insertada  # ← ahora el número de comanda es el ID
+
+            for platillo in comanda_data_copy["platillos"]:
+                cursor.execute("""
+                    INSERT INTO platillos_comanda (comanda_id, nombre, cantidad, observaciones)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    comanda_id_insertada,
+                    platillo["platillo"],
+                    int(platillo["cantidad"]),
+                    platillo["observaciones"]
+                ))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+        except Exception as error:
+            print("❌ Error al guardar comanda:", error)
+            btn_generar_comanda.disabled = False
+            page.update()
+            return
+
         comandas_realizadas.append(comanda_data_copy)
 
-        comanda_data["numero_comanda"] += 1
+        # Reiniciar comanda para nueva entrada
         comanda_data["platillos"] = []
         comanda_data["estado"] = "En preparación"
-        comanda_data["id"] = str(uuid.uuid4())
 
         platillos_agregados.controls.clear()
         vista_prev_platillo.content = None
-        comanda_numero_text.value = f"Comanda # {comanda_data['numero_comanda']}"
+        comanda_numero_text.value = f"Comanda # {comanda_data_copy['numero_comanda']}"
 
         btn_generar_comanda.disabled = False
         page.update()
 
     def borrar_comanda(e, comanda_id):
         try:
-            conexion = conectar_bd()
-            cursor = conexion.cursor()
-            cursor.execute("DELETE FROM generarrecibo WHERE Comanda_id = %s", (comanda_id,))
-            cursor.execute("DELETE FROM comandapedido WHERE Comanda_id = %s", (comanda_id,))
-            cursor.execute("DELETE FROM platillos_comanda WHERE comanda_id = %s", (comanda_id,))
-            cursor.execute("DELETE FROM comandas WHERE id = %s", (comanda_id,))
-            conexion.commit()
-            conexion.close()
-        except Exception as ex:
-            print("❌ Error al eliminar de la base de datos:", ex)
+            conn = conectar_bd()
+            cursor = conn.cursor()
 
+            # Borrar primero los platillos relacionados (por restricción de FK)
+            cursor.execute("DELETE FROM platillos_comanda WHERE comanda_id = %s", (comanda_id,))
+
+            # Borrar la comanda principal
+            cursor.execute("DELETE FROM comandas WHERE id = %s", (comanda_id,))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print(f"✅ Comanda {comanda_id} eliminada correctamente de la base de datos.")
+        except Exception as error:
+            print("❌ Error al eliminar comanda:", error)
+
+        # Eliminar también de la lista local para mantener sincronizado
         index = next((i for i, c in enumerate(comandas_realizadas) if c["id"] == comanda_id), None)
         if index is not None:
             del comandas_realizadas[index]
         mostrar_comandas_realizadas(e)
         page.update()
-        
+
+
     def modificar_comanda(e, comanda_id):
         for i, comanda in enumerate(comandas_realizadas):
             if comanda["id"] == comanda_id:
                 comanda_data.update(comanda)
-                comanda_data["id"] = str(uuid.uuid4())
                 numero_mesa_dropdown.value = str(comanda["numero_mesa"])
                 numero_comensales_dropdown.value = str(comanda["numero_comensales"])
                 comandas_realizadas.pop(i)
@@ -341,32 +339,26 @@ def main(page: ft.Page):
 
     def actualizar_estado(e, comanda_id):
         nuevo_estado = e.control.value
+
+        # Actualiza en la lista local
         for comanda in comandas_realizadas:
             if comanda["id"] == comanda_id:
                 comanda["estado"] = nuevo_estado
                 break
+
+        # Actualiza en la base de datos
         try:
-            conexion = conectar_bd()
-            cursor = conexion.cursor()
-
-            # Actualizar estado en comandas
+            conn = conectar_bd()
+            cursor = conn.cursor()
             cursor.execute("UPDATE comandas SET estado = %s WHERE id = %s", (nuevo_estado, comanda_id))
-
-            # Obtener el ID del pedido relacionado
-            cursor.execute("SELECT GenerarPedido_IdGenerarPedido FROM comandapedido WHERE Comanda_id = %s", (comanda_id,))
-            resultado = cursor.fetchone()
-            if resultado:
-                pedido_id = resultado[0]
-                # Actualizar estado también en generarpedido
-                cursor.execute("UPDATE generarpedido SET Estatus = %s WHERE IdGenerarPedido = %s", (nuevo_estado, pedido_id))
-
-            conexion.commit()
-            conexion.close()
-        except Exception as ex:
-            print("❌ Error al actualizar estado en BD:", ex)
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print(f"✅ Estado actualizado a '{nuevo_estado}' para comanda {comanda_id}")
+        except Exception as error:
+            print("❌ Error al actualizar estado:", error)
 
         mostrar_comandas_realizadas(e)
-
 
     def toggle_sidebar(e):
         page.drawer.open = not page.drawer.open
@@ -461,4 +453,4 @@ def main(page: ft.Page):
         ], scroll=ft.ScrollMode.AUTO, expand=True)
     )
 
-ft.app(target=main)
+ft.app(target=main)  
