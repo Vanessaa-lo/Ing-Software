@@ -79,6 +79,7 @@ def main(page: ft.Page):
                     subprocess.Popen(["python", "main.py", f"--username={NombreUsuario}", f"--tipo={tipo_usuario}"])
                 elif tipo_usuario == "Cliente":
                     subprocess.Popen(["python", "menu.py", f"--username={NombreUsuario}", f"--tipo={tipo_usuario}"])
+
                 else:
                     mostrar_mensaje("Tipo de usuario desconocido", "rojo")
                     return

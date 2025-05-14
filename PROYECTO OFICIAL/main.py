@@ -6,53 +6,14 @@ from datetime import datetime
 from flet import Animation as anim
 import re
 
-if __name__ == "__main__":
-    import argparse
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--username", help="Nombre de usuario para la sesión")
-    parser.add_argument("--tipo", help="Tipo de usuario (Empleado o Cliente)")
-    args = parser.parse_args()
-    
-    ft.app(target=lambda page: main(page, args.username, args.tipo))
-    
-def obtener_tipo_usuario(nombre_usuario):
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    try:
-        # Verificar si es empleado
-        cursor.execute("""
-            SELECT e.Nombre, e.Apellido 
-            FROM Empleado e
-            JOIN Usuario u ON e.Usuario_IdUsuario = u.IdUsuario
-            WHERE u.NombreUsuario = %s
-        """, (nombre_usuario,))
-        empleado = cursor.fetchone()
-        if empleado:
-            return "Empleado", f"{empleado[0]} {empleado[1]}"
-        
-        # Verificar si es cliente
-        cursor.execute("""
-            SELECT c.Nombre, c.Apellido 
-            FROM Cliente c
-            JOIN Usuario u ON c.Usuario_IdUsuario = u.IdUsuario
-            WHERE u.NombreUsuario = %s
-        """, (nombre_usuario,))
-        cliente = cursor.fetchone()
-        if cliente:
-            return "Cliente", f"{cliente[0]} {cliente[1]}"
-        
-        return "Desconocido", nombre_usuario
-    finally:
-        cursor.close()
-        conn.close()
 
-def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
+
+def main(page: ft.Page):
     page.title = "Punto de Venta"
     page.bgcolor = "#1C1C1C"
     page.theme = ft.Theme(font_family="Poppins")
     page.padding = 10
-    tipo_usuario, nombre_completo = obtener_tipo_usuario(nombre_usuario) if nombre_usuario else ("Desconocido", "Invitado")
 
     def toggle_sidebar(e):
         page.drawer.open = not page.drawer.open
@@ -66,19 +27,9 @@ def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
         controls=[
             ft.Container(
                 content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.ACCOUNT_CIRCLE, size=100, color="#E71790"),
-                        alignment=ft.alignment.center
+                    ft.Container( 
                     ),
-                    ft.Text(nombre_usuario, size=20, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
-                    ft.Text(tipo_usuario, size=16, color="#E71790", text_align=ft.TextAlign.CENTER),
-                    ft.Divider(color="white"),
                     
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.ACCOUNT_BOX),
-                        title=ft.Text("Mi Información"),
-                        on_click=lambda e: mostrar_informacion_usuario(page, nombre_usuario, tipo_usuario)
-                    ),
                     ft.ListTile(
                         leading=ft.Icon(ft.Icons.HOME),
                         title=ft.Text("Regresar al Login"),
@@ -99,71 +50,6 @@ def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
             )
         ]
     )
-
-    def mostrar_informacion_usuario(page, nombre_usuario, tipo_usuario):
-        conn = conectar_bd()
-        cursor = conn.cursor(dictionary=True)
-        
-        try:
-            if tipo_usuario == "Empleado":
-                cursor.execute("""
-                    SELECT e.*, u.NombreUsuario 
-                    FROM Empleado e
-                    JOIN Usuario u ON e.Usuario_IdUsuario = u.IdUsuario
-                    WHERE u.NombreUsuario = %s
-                """, (nombre_usuario,))
-                info = cursor.fetchone()
-                
-                contenido = [
-                    ft.Text("Información del Empleado", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
-                    ft.Text(f"Nombre: {info['Nombre']} {info['Apellido']}", size=16),
-                    ft.Text(f"Teléfono: {info['Telefono']}", size=16),
-                    ft.Text(f"Correo: {info['Correo']}", size=16),
-                    ft.Text(f"Usuario: {info['NombreUsuario']}", size=16)
-                ]
-                
-            elif tipo_usuario == "Cliente":
-                cursor.execute("""
-                    SELECT c.*, u.NombreUsuario 
-                    FROM Cliente c
-                    JOIN Usuario u ON c.Usuario_IdUsuario = u.IdUsuario
-                    WHERE u.NombreUsuario = %s
-                """, (nombre_usuario,))
-                info = cursor.fetchone()
-                
-                contenido = [
-                    ft.Text("Información del Cliente", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
-                    ft.Text(f"Nombre: {info['Nombre']} {info['Apellido']}", size=16),
-                    ft.Text(f"Teléfono: {info['Telefono']}", size=16),
-                    ft.Text(f"Correo: {info['Correo']}", size=16),
-                    ft.Text(f"Usuario: {info['NombreUsuario']}", size=16)
-                ]
-                
-            else:
-                contenido = [ft.Text("Información no disponible", size=16)]
-                
-            page.clean()
-            page.add(
-                ft.Column([
-                    ft.Container(
-                        content=ft.Column(contenido, spacing=10),
-                        padding=20,
-                        bgcolor="#2A2A2A",
-                        border_radius=10,
-                        width=400
-                    ),
-                    ft.ElevatedButton("Volver", on_click=lambda e: mostrar_inicio(page), bgcolor="#5D0E41", color="white")
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
-            )
-            
-        except Exception as err:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(err)}"))
-            page.snack_bar.open = True
-        finally:
-            cursor.close()
-            conn.close()
-            page.update()
-
 
     def mostrar_inicio(e=None):
         page.clean()
@@ -216,57 +102,200 @@ def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
         page.add(ft.Text( size=24, weight=ft.FontWeight.BOLD, color="#E71790"))
         page.update()
 
+
+
+
+
+
+
+
+
     def mostrar_reportes(e=None):
+        import flet as ft
+
         page.clean()
 
-        conn = conectar_bd()
-        cursor = conn.cursor()
+        # Widgets tablas
+        tabla_pedidos = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID Pedido")),
+                ft.DataColumn(ft.Text("Producto")),
+                ft.DataColumn(ft.Text("Total")),
+                ft.DataColumn(ft.Text("Estatus")),
+                ft.DataColumn(ft.Text("Fecha")),
+            ],
+            rows=[]
+        )
 
-        def contar_total(tabla):
-            cursor.execute(f"SELECT COUNT(*) FROM {tabla}")
-            return cursor.fetchone()[0]
+        tabla_cobros = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID Recibo")),
+                ft.DataColumn(ft.Text("Producto")),
+                ft.DataColumn(ft.Text("Total")),
+                ft.DataColumn(ft.Text("Fecha")),
+                ft.DataColumn(ft.Text("Hora")),
+                ft.DataColumn(ft.Text("Usuario")),
+            ],
+            rows=[]
+        )
 
-        def sumar_total(tabla, campo_valor):
-            cursor.execute(f"SELECT SUM({campo_valor}) FROM {tabla}")
-            resultado = cursor.fetchone()[0]
-            return float(resultado) if resultado else 0.0
+        tabla_movimientos = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID Corte")),
+                ft.DataColumn(ft.Text("Ingreso Día")),
+                ft.DataColumn(ft.Text("Egreso Día")),
+                ft.DataColumn(ft.Text("Dinero en Caja")),
+                ft.DataColumn(ft.Text("Fecha Inicio")),
+                ft.DataColumn(ft.Text("Fecha Finalizar")),
+            ],
+            rows=[]
+        )
 
-        # ✅ Ventas desde detalleventas
-        cursor.execute("""
-            SELECT SUM(d.Total)
-            FROM ventas v
-            JOIN detalleventas d ON v.IdVentas = d.Ventas_IdVentas
-        """)
-        total_ventas = cursor.fetchone()[0] or 0.0
+        resumen_final = ft.Column([], spacing=10)
 
-        total_entradas = contar_total("entradasproductos")
-        total_salidas = contar_total("salidasproductos")
-        total_pedidos = contar_total("generarpedido")
-        total_caja = sumar_total("cortecaja", "DineroFinalizar")
+        # Cargar Pedidos
+        def cargar_pedidos():
+            conn = conectar_bd()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT IdGenerarPedido, Producto, Total, Estatus, FechaPedido FROM generarpedido ORDER BY IdGenerarPedido DESC")
+            pedidos = cursor.fetchall()
+            cursor.close()
+            conn.close()
 
-        conn.close()
+            for pedido in pedidos:
+                tabla_pedidos.rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(str(pedido["IdGenerarPedido"]))),
+                            ft.DataCell(ft.Text(pedido["Producto"])),
+                            ft.DataCell(ft.Text(f"${pedido['Total']:.2f}")),
+                            ft.DataCell(ft.Text(pedido["Estatus"])),
+                            ft.DataCell(ft.Text(str(pedido["FechaPedido"]))),
+                        ]
+                    )
+                )
 
+        # Cargar Cobros
+        def cargar_cobros():
+            conn = conectar_bd()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT IdRecibosPedidos, Producto, Total, Fecha, Hora, Usuario FROM recibospedidos ORDER BY IdRecibosPedidos DESC")
+            cobros = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            for cobro in cobros:
+                tabla_cobros.rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(str(cobro["IdRecibosPedidos"]))),
+                            ft.DataCell(ft.Text(cobro["Producto"])),
+                            ft.DataCell(ft.Text(f"${cobro['Total']:.2f}")),
+                            ft.DataCell(ft.Text(str(cobro["Fecha"]))),
+                            ft.DataCell(ft.Text(str(cobro["Hora"]))),
+                            ft.DataCell(ft.Text(cobro["Usuario"])),
+                        ]
+                    )
+                )
+
+        # Cargar Movimientos de Caja
+        def cargar_movimientos():
+            conn = conectar_bd()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT idCorteCaja, IngresoDia, EgresoDia, DineroEnCaja, Fecha_Inico, FechaFinalizar FROM cortecaja ORDER BY idCorteCaja DESC")
+            movimientos = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            for mov in movimientos:
+                tabla_movimientos.rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(str(mov["idCorteCaja"]))),
+                            ft.DataCell(ft.Text(f"${mov['IngresoDia']:.2f}")),
+                            ft.DataCell(ft.Text(f"${mov['EgresoDia']:.2f}")),
+                            ft.DataCell(ft.Text(f"${mov['DineroEnCaja']:.2f}")),
+                            ft.DataCell(ft.Text(str(mov["Fecha_Inico"]))),
+                            ft.DataCell(ft.Text(str(mov["FechaFinalizar"]))),
+                        ]
+                    )
+                )
+
+        # Cargar Resumen Final
+        def cargar_resumen_final():
+            conn = conectar_bd()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute("SELECT SUM(Total) AS VentasTotales FROM recibospedidos")
+            ventas = cursor.fetchone()
+
+            cursor.execute("SELECT SUM(IngresoDia) AS TotalIngresos, SUM(EgresoDia) AS TotalEgresos, SUM(DineroEnCaja) AS DineroFinal FROM cortecaja")
+            corte = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            resumen_final.controls.clear()
+            resumen_final.controls.append(ft.Text("🧮 Resumen General del Proyecto", size=24, weight=ft.FontWeight.BOLD, color="#E71790"))
+
+            resumen_final.controls.append(ft.Text(f"📦 Ventas Totales Realizadas: ${ventas['VentasTotales']:.2f}" if ventas['VentasTotales'] else "📦 Ventas Totales Realizadas: $0.00"))
+            resumen_final.controls.append(ft.Text(f"💵 Ingresos Registrados: ${corte['TotalIngresos']:.2f}" if corte['TotalIngresos'] else "💵 Ingresos Registrados: $0.00"))
+            resumen_final.controls.append(ft.Text(f"💸 Egresos Registrados: ${corte['TotalEgresos']:.2f}" if corte['TotalEgresos'] else "💸 Egresos Registrados: $0.00"))
+            resumen_final.controls.append(ft.Text(f"🪙 Dinero Actual en Caja: ${corte['DineroFinal']:.2f}" if corte['DineroFinal'] else "🪙 Dinero Actual en Caja: $0.00"))
+
+        # Cargar todos los datos
+        cargar_pedidos()
+        cargar_cobros()
+        cargar_movimientos()
+        cargar_resumen_final()
+
+        # Layout principal
         page.add(
             ft.Column([
-                ft.Text("📊 Reporte General", size=24, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Text("📋 Reportes Completos del Proyecto", size=30, weight=ft.FontWeight.BOLD, color="#E71790"),
                 ft.Divider(),
+
+                ft.Text("🧾 Pedidos Registrados", size=24, weight=ft.FontWeight.BOLD, color="white"),
                 ft.Container(
-                    content=ft.Column([
-                        ft.Text(f"🛒 Ventas Totales: ${total_ventas:.2f}", size=18, color="white"),
-                        ft.Text(f"📥 Total Entradas: {total_entradas}", size=18, color="white"),
-                        ft.Text(f"📤 Total Salidas: {total_salidas}", size=18, color="white"),
-                        ft.Text(f"📦 Pedidos Generados: {total_pedidos}", size=18, color="white"),
-                        ft.Text(f"💰 Dinero Total en Caja: ${total_caja:.2f}", size=18, color="white"),
-                        ft.Text(f"👤 Usuario: {nombre_completo}", size=18, color="#E71790"),
-                    ], spacing=10),
-                    padding=20,
-                    bgcolor="#2A2A2A",
+                    content=tabla_pedidos,
+                    height=300,
+                    bgcolor="#1E1E1E",
                     border_radius=10,
-                    width=400
+                    padding=10,
+                    expand=True
                 ),
+                ft.Divider(),
+
+                ft.Text("📦 Cobros Realizados", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                ft.Container(
+                    content=tabla_cobros,
+                    height=300,
+                    bgcolor="#1E1E1E",
+                    border_radius=10,
+                    padding=10,
+                    expand=True
+                ),
+                ft.Divider(),
+
+                ft.Text("💰 Ingresos y Egresos de Caja", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                ft.Container(
+                    content=tabla_movimientos,
+                    height=300,
+                    bgcolor="#1E1E1E",
+                    border_radius=10,
+                    padding=10,
+                    expand=True
+                ),
+                ft.Divider(),
+
+                resumen_final,
+                ft.Divider(),
+
                 ft.ElevatedButton("Volver", on_click=mostrar_inicio, bgcolor="#5D0E41", color="white")
-            ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
+            ], spacing=20, expand=True, scroll=ft.ScrollMode.ALWAYS)
         )
+
+
 
 
 
@@ -680,294 +709,308 @@ def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
 
 
 
+#_----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
 
 
     def mostrar_caja_chica(e=None):
+        import flet as ft
+
         page.clean()
 
         conn = conectar_bd()
         cursor = conn.cursor(dictionary=True)
 
+        # Obtener último corte actual
         cursor.execute("SELECT * FROM cortecaja ORDER BY idCorteCaja DESC LIMIT 1")
         corte = cursor.fetchone()
+        dinero_actual = float(corte["DineroEnCaja"]) if corte else 0
+        id_corte = corte["idCorteCaja"]
 
-        dinero_actual = corte["DineroEnCaja"] if corte else 0
-
-        cursor.execute("SELECT IdGenerarPedido, Producto FROM generarpedido WHERE Estatus = 'Pedido Realizado'")
+        # Cargar pedidos pendientes
+        cursor.execute("SELECT * FROM generarpedido WHERE Estatus = 'Pedido Realizado'")
         pedidos = cursor.fetchall()
+
         cursor.close()
         conn.close()
 
-        # --- Sidebar de cobro fijo ---
-        producto_seleccionado = ft.Text("")
-        total_a_pagar = ft.Text("")
-        monto_recibido_field = ft.TextField(label="Monto recibido", keyboard_type=ft.KeyboardType.NUMBER)
-        cambio_text = ft.Text("Cambio: $0.00", size=16, color="white")
-        id_pedido_actual = {"id": None}
+        # Variables
+        pedido_seleccionado = {"id": None, "total": 0.0, "producto": ""}
+        total_a_pagar = ft.Text("Total: $0.00", size=20, color="white")
+        monto_recibido_field = ft.TextField(
+            label="Monto Recibido",
+            width=200,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            on_change=lambda e: validar_monto_recibido()
+        )
+        cambio_field = ft.Text("Cambio: $0.00", size=20, color="#00FF00")
+        ayuda_label = ft.Text("", size=15)
 
-        sidebar = ft.Container(
-            content=ft.Column([
-                ft.Text("Cobro de Pedido", size=24, weight="bold", color="#E71790"),
-                producto_seleccionado,
-                total_a_pagar,
-                monto_recibido_field,
-                cambio_text,
-                ft.ElevatedButton("Confirmar Cobro", on_click=lambda e: confirmar_cobro()),
-            ], spacing=10),
-            width=300,
-            bgcolor="#2A2A2A",
-            padding=20,
-            border_radius=10
+        # Widgets de ingresos/egresos
+        cantidad_movimiento = ft.TextField(
+            label="Cantidad Movimiento",
+            width=200,
+            keyboard_type=ft.KeyboardType.NUMBER,
+        )
+        descripcion_movimiento = ft.TextField(
+            label="Motivo del Movimiento",
+            width=400
+        )
+        ayuda_movimiento = ft.Text("", size=15)
+
+        tabla_pedidos = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID")),
+                ft.DataColumn(ft.Text("Descripción")),
+                ft.DataColumn(ft.Text("Precio")),
+                ft.DataColumn(ft.Text("Cobrar")),
+            ],
+            rows=[]
         )
 
-        # --- Área de pedidos ---
-        tabla_pedidos = ft.ListView(spacing=10, padding=10, expand=True)
+        # ------------------- FUNCIONES ----------------------
 
-        def actualizar_cambio(e):
-            try:
-                recibido = float(monto_recibido_field.value)
-                total = float(total_a_pagar.value.replace("Total: $", ""))
-                cambio = recibido - total
-                if cambio >= 0:
-                    cambio_text.value = f"Cambio: ${cambio:.2f}"
-                else:
-                    cambio_text.value = "Monto insuficiente"
-            except:
-                cambio_text.value = "Monto inválido"
+        # Validar monto recibido
+        def validar_monto_recibido():
+            monto = monto_recibido_field.value
+            if not monto:
+                ayuda_label.value = "Ingrese el monto recibido."
+                ayuda_label.color = "orange"
+                page.update()
+                return
+
+            if not re.match(r'^\d+(\.\d{1,2})?$', monto):
+                ayuda_label.value = "❗ Solo números y máximo 2 decimales."
+                ayuda_label.color = "red"
+            else:
+                ayuda_label.value = "✅ Monto válido."
+                ayuda_label.color = "green"
             page.update()
 
-        monto_recibido_field.on_change = actualizar_cambio
-
-        # --- Función para seleccionar pedido ---
+        # Seleccionar pedido
         def seleccionar_pedido(pedido):
-            nombre_limpio = pedido["Producto"].split("-")[0].strip()
-            conn2 = conectar_bd()
-            cursor2 = conn2.cursor(dictionary=True)
-            cursor2.execute("SELECT Precio FROM productos WHERE Nombre LIKE %s", (f"%{nombre_limpio}%",))
-            resultado = cursor2.fetchone()
-            cursor2.close()
-            conn2.close()
+            pedido_seleccionado["id"] = pedido["IdGenerarPedido"]
+            pedido_seleccionado["total"] = float(pedido["Total"])
+            pedido_seleccionado["producto"] = pedido["Producto"]
 
-            if resultado:
-                producto_seleccionado.value = f"Producto: {pedido['Producto']}"
-                total_a_pagar.value = f"Total: ${resultado['Precio']:.2f}"
-                monto_recibido_field.value = ""
-                cambio_text.value = "Cambio: $0.00"
-                id_pedido_actual["id"] = pedido["IdGenerarPedido"]
-                page.update()
-            else:
-                page.snack_bar = ft.SnackBar(content=ft.Text("❌ No se encontró precio"))
-                page.snack_bar.open = True
-                page.update()
+            total_a_pagar.value = f"Total: ${pedido['Total']:.2f}"
+            cambio_field.value = "Cambio: $0.00"
+            monto_recibido_field.value = ""
+            ayuda_label.value = ""
+            page.update()
 
-        # --- Función para confirmar el cobro ---
-        def confirmar_cobro():
-            if id_pedido_actual["id"] is None:
-                page.snack_bar = ft.SnackBar(content=ft.Text("❗ No hay pedido seleccionado"))
-                page.snack_bar.open = True
+        # Confirmar cobro
+        def confirmar_cobro(e):
+            nonlocal dinero_actual
+
+            if pedido_seleccionado["id"] is None:
+                ayuda_label.value = "❗ Seleccione un pedido antes de cobrar."
+                ayuda_label.color = "red"
+                page.update()
                 return
 
-            try:
-                recibido = float(monto_recibido_field.value)
-                total = float(total_a_pagar.value.replace("Total: $", ""))
-            except:
-                page.snack_bar = ft.SnackBar(content=ft.Text("❗ Datos inválidos"))
-                page.snack_bar.open = True
+            if not monto_recibido_field.value:
+                ayuda_label.value = "❗ Ingrese el monto recibido."
+                ayuda_label.color = "red"
+                page.update()
                 return
+
+            if not re.match(r'^\d+(\.\d{1,2})?$', monto_recibido_field.value):
+                ayuda_label.value = "❗ Formato inválido."
+                ayuda_label.color = "red"
+                page.update()
+                return
+
+            recibido = float(monto_recibido_field.value)
+            total = pedido_seleccionado["total"]
 
             if recibido < total:
-                page.snack_bar = ft.SnackBar(content=ft.Text("❗ Monto insuficiente"))
-                page.snack_bar.open = True
+                ayuda_label.value = "❗ Monto recibido menor al total."
+                ayuda_label.color = "red"
+                page.update()
                 return
 
-            # Registrar cobro
-            conn3 = conectar_bd()
-            cursor3 = conn3.cursor()
-            cursor3.execute("UPDATE generarpedido SET Estatus = 'Pagado' WHERE IdGenerarPedido = %s", (id_pedido_actual["id"],))
-            cursor3.execute("""
-                INSERT INTO recibos (Producto, Total, Fecha, Hora, Usuario)
-                VALUES (%s, CURDATE(), CURTIME(), 'admin')
-            """, (producto_seleccionado.value.replace("Producto: ", ""), total))
-            conn3.commit()
-            cursor3.close()
-            conn3.close()
+            cambio = recibido - total
 
-            page.snack_bar = ft.SnackBar(content=ft.Text("✅ Cobro exitoso"))
-            page.snack_bar.open = True
-            mostrar_caja_chica()
+            try:
+                connc = conectar_bd()
+                cursorc = connc.cursor(dictionary=True)
 
-        # --- Botón de ingresos/egresos ---
-        def abrir_ingresos_egresos(e):
-            mostrar_ingresos_egresos()
+                # Actualizar pedido
+                cursorc.execute("UPDATE generarpedido SET Estatus = 'Pagado' WHERE IdGenerarPedido = %s", (pedido_seleccionado["id"],))
 
-        boton_ingresos_egresos = ft.ElevatedButton("Ingresos / Egresos", on_click=abrir_ingresos_egresos, bgcolor="#5D0E41", color="white", width=200)
+                # Actualizar caja chica
+                cursorc.execute("""
+                    UPDATE cortecaja
+                    SET DineroEnCaja = DineroEnCaja + %s, IngresoDia = IngresoDia + %s
+                    WHERE idCorteCaja = %s
+                """, (total, total, id_corte))
 
-        for pedido in pedidos:
-            tabla_pedidos.controls.append(
-                ft.Container(
-                    content=ft.Row([
-                        ft.Text(f"ID: {pedido['IdGenerarPedido']}", size=16, color="white"),
-                        ft.Text(pedido["Producto"], size=16, color="#E71790", expand=True),
-                        ft.ElevatedButton("Cobrar", on_click=lambda e, p=pedido: seleccionar_pedido(p), bgcolor="#28A745", color="white"),
-                    ]),
-                    padding=10,
-                    bgcolor="#1C1C1C",
-                    border_radius=10
-                )
-            )
+                # Insertar en recibospedidos
+                # Antes de insertar el recibo
+                nombre_completo = page.client_storage.get("nombre_completo")
+                if not nombre_completo:
+                    nombre_completo = "Empleado"
 
-        page.add(
-            ft.Row([
-                sidebar,
-                ft.Container(
-                    content=ft.Column([
-                        ft.Text("Caja Chica", size=26, weight=ft.FontWeight.BOLD, color="#E71790"),
-                        ft.Text(f"Dinero en caja: ${dinero_actual:.2f}", size=18, color="white"),
-                        tabla_pedidos,
-                        boton_ingresos_egresos,
-                        ft.ElevatedButton("Volver", on_click=mostrar_inicio, bgcolor="#5D0E41", color="white", width=200)
-                    ], spacing=20),
-                    expand=True,
-                    padding=20
-                )
-            ])
-        )
-        
-    def mostrar_ingresos_egresos(e=None):
-        page.clean()
+                cursorc.execute("""
+                    INSERT INTO recibospedidos (Producto, Total, Fecha, Hora, Usuario)
+                    VALUES (%s, %s, CURDATE(), CURTIME(), %s)
+                """, (
+                    pedido_seleccionado["producto"],
+                    total,
+                    nombre_completo  # <- ya seguro
+                ))
 
-        conn = conectar_bd()
-        cursor = conn.cursor(dictionary=True)
+                connc.commit()
+                cursorc.close()
+                connc.close()
 
-        # Crear tabla ingresos_egresos si no existe (opcional)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ingresos_egresos (
-            idMovimiento INT AUTO_INCREMENT PRIMARY KEY,
-            TipoMovimiento VARCHAR(20),
-            Monto DECIMAL(10,2),
-            Descripcion TEXT,
-            Fecha DATE,
-            Hora TIME
-        )
-        """)
-        conn.commit()
+                for row in tabla_pedidos.rows:
+                    if row.cells[0].content.value == str(pedido_seleccionado["id"]):
+                        tabla_pedidos.rows.remove(row)
+                        break
 
-        cursor.execute("SELECT * FROM ingresos_egresos ORDER BY Fecha DESC, Hora DESC")
-        movimientos = cursor.fetchall()
-        cursor.close()
-        conn.close()
+                dinero_actual += total
+                total_a_pagar.value = "Total: $0.00"
+                monto_recibido_field.value = ""
+                cambio_field.value = f"Cambio: ${cambio:.2f}"
+                ayuda_label.value = "✅ Cobro realizado."
+                ayuda_label.color = "green"
+                pedido_seleccionado["id"] = None
+                pedido_seleccionado["total"] = 0.0
+                pedido_seleccionado["producto"] = ""
 
-        tabla_movimientos = ft.DataTable(
-            columns=[
-                ft.DataColumn(ft.Text("Tipo")),
-                ft.DataColumn(ft.Text("Monto")),
-                ft.DataColumn(ft.Text("Descripción")),
-                ft.DataColumn(ft.Text("Fecha")),
-                ft.DataColumn(ft.Text("Hora")),
-            ],
-            rows=[
-                ft.DataRow(cells=[
-                    ft.DataCell(ft.Text(mov["TipoMovimiento"])),
-                    ft.DataCell(ft.Text(f"${mov['Monto']:.2f}")),
-                    ft.DataCell(ft.Text(mov["Descripcion"])),
-                    ft.DataCell(ft.Text(str(mov["Fecha"]))),
-                    ft.DataCell(ft.Text(str(mov["Hora"]))),
-                ]) for mov in movimientos
-            ]
-        )
+                page.update()
 
-        # --- Funciones para agregar movimientos ---
-        def abrir_ventana_ingreso():
-            pedir_contraseña(tipo="Ingreso")
+            except Exception as err:
+                ayuda_label.value = f"❌ Error: {err}"
+                ayuda_label.color = "red"
+                page.update()
 
-        def abrir_ventana_egreso():
-            pedir_contraseña(tipo="Egreso")
+        # Confirmar movimiento (Ingreso/Egreso)
+        def confirmar_movimiento(valor):
+            nonlocal dinero_actual
 
-        def pedir_contraseña(tipo):
-            contraseña_field = ft.TextField(label="Contraseña Admin", password=True, can_reveal_password=True)
+            if not cantidad_movimiento.value or not descripcion_movimiento.value:
+                ayuda_movimiento.value = "❗ Ingrese cantidad y motivo."
+                ayuda_movimiento.color = "red"
+                page.update()
+                return
 
-            def validar_contraseña(e):
-                if contraseña_field.value == "admin":
-                    page.dialog.open = False
-                    page.update()
-                    abrir_formulario_movimiento(tipo)
+            if not re.match(r'^\d+(\.\d{1,2})?$', cantidad_movimiento.value):
+                ayuda_movimiento.value = "❗ Solo números y punto decimal."
+                ayuda_movimiento.color = "red"
+                page.update()
+                return
+
+            cantidad = float(cantidad_movimiento.value)
+
+            if valor == -1 and cantidad > dinero_actual:
+                ayuda_movimiento.value = "❗ No puede retirar más dinero del que hay."
+                ayuda_movimiento.color = "red"
+                page.update()
+                return
+
+            try:
+                connm = conectar_bd()
+                cursorm = connm.cursor(dictionary=True)
+
+                if valor == 1:
+                    cursorm.execute("""
+                        UPDATE cortecaja
+                        SET DineroEnCaja = DineroEnCaja + %s, IngresoDia = IngresoDia + %s
+                        WHERE idCorteCaja = %s
+                    """, (cantidad, cantidad, id_corte))
+                    dinero_actual += cantidad
                 else:
-                    page.snack_bar = ft.SnackBar(content=ft.Text("❌ Contraseña incorrecta"))
-                    page.snack_bar.open = True
+                    cursorm.execute("""
+                        UPDATE cortecaja
+                        SET DineroEnCaja = DineroEnCaja - %s, EgresoDia = EgresoDia + %s
+                        WHERE idCorteCaja = %s
+                    """, (cantidad, cantidad, id_corte))
+                    dinero_actual -= cantidad
 
-            page.dialog = ft.AlertDialog(
-                title=ft.Text(f"Validar para {tipo}"),
-                content=contraseña_field,
-                actions=[
-                    ft.TextButton("Cancelar", on_click=lambda e: cerrar_dialogo()),
-                    ft.TextButton("Aceptar", on_click=validar_contraseña),
+                connm.commit()
+                cursorm.close()
+                connm.close()
+
+                cantidad_movimiento.value = ""
+                descripcion_movimiento.value = ""
+                ayuda_movimiento.value = "✅ Movimiento registrado correctamente."
+                ayuda_movimiento.color = "green"
+
+                page.update()
+
+            except Exception as err:
+                ayuda_movimiento.value = f"❌ Error: {err}"
+                ayuda_movimiento.color = "red"
+                page.update()
+
+        # ------------------------------------------------------
+
+        # Insertar pedidos
+        for pedido in pedidos:
+            fila = ft.DataRow(
+                cells=[
+                    ft.DataCell(ft.Text(str(pedido["IdGenerarPedido"]))),
+                    ft.DataCell(ft.Text(pedido["Producto"])),
+                    ft.DataCell(ft.Text(f"${float(pedido['Total']):.2f}")),
+                    ft.DataCell(
+                        ft.IconButton(
+                            icon=ft.Icons.PAID,
+                            tooltip="Cobrar",
+                            icon_color="green",
+                            on_click=lambda e, p=pedido: seleccionar_pedido(p)
+                        )
+                    )
                 ]
             )
-            page.dialog.open = True
-            page.update()
+            tabla_pedidos.rows.append(fila)
 
-        def cerrar_dialogo():
-            page.dialog.open = False
-            page.update()
-
-        def abrir_formulario_movimiento(tipo):
-            monto_field = ft.TextField(label="Monto", keyboard_type=ft.KeyboardType.NUMBER)
-            descripcion_field = ft.TextField(label="Descripción")
-
-            def guardar_movimiento(e):
-                try:
-                    monto = float(monto_field.value)
-                except:
-                    page.snack_bar = ft.SnackBar(content=ft.Text("❗ Monto inválido"))
-                    page.snack_bar.open = True
-                    return
-
-                conn2 = conectar_bd()
-                cursor2 = conn2.cursor()
-                cursor2.execute("""
-                    INSERT INTO ingresos_egresos (TipoMovimiento, Monto, Descripcion, Fecha, Hora)
-                    VALUES (%s, %s, %s, CURDATE(), CURTIME())
-                """, (tipo, monto, descripcion_field.value))
-                conn2.commit()
-                cursor2.close()
-                conn2.close()
-
-                page.dialog.open = False
-                page.snack_bar = ft.SnackBar(content=ft.Text(f"✅ {tipo} registrado"))
-                page.snack_bar.open = True
-                mostrar_ingresos_egresos()
-
-            page.dialog = ft.AlertDialog(
-                title=ft.Text(f"Agregar {tipo}"),
-                content=ft.Column([
-                    monto_field,
-                    descripcion_field
-                ], spacing=10),
-                actions=[
-                    ft.TextButton("Cancelar", on_click=lambda e: cerrar_dialogo()),
-                    ft.TextButton("Guardar", on_click=guardar_movimiento),
-                ]
-            )
-            page.dialog.open = True
-            page.update()
-
+        # Layout principal
         page.add(
             ft.Column([
-                ft.Text("Historial de Ingresos y Egresos", size=26, weight="bold", color="#E71790"),
                 ft.Row([
-                    ft.ElevatedButton("Agregar Ingreso", on_click=lambda e: abrir_ventana_ingreso(), bgcolor="#28A745", color="white"),
-                    ft.ElevatedButton("Agregar Egreso", on_click=lambda e: abrir_ventana_egreso(), bgcolor="#D32F2F", color="white"),
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=20),
-                ft.Container(content=tabla_movimientos, expand=True, bgcolor="#1C1C1C", border_radius=10, padding=10),
-                ft.ElevatedButton("Volver", on_click=mostrar_caja_chica, bgcolor="#5D0E41", color="white", width=200)
-            ], spacing=20, alignment=ft.MainAxisAlignment.CENTER)
+                    ft.Text("💸 Caja Chica", size=30, weight=ft.FontWeight.BOLD, color="#E71790"),
+                    ft.Text(f"🪙 Dinero en caja: ${dinero_actual:.2f}", size=20, color="white"),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Divider(),
+                total_a_pagar,
+                monto_recibido_field,
+                ayuda_label,
+                cambio_field,
+                ft.ElevatedButton("Confirmar Cobro", on_click=confirmar_cobro, bgcolor="green", color="white"),
+                ft.Divider(),
+                ft.Text("Pedidos Pendientes:", size=22, weight=ft.FontWeight.BOLD, color="#E71790"),
+                ft.Container(
+                    content=tabla_pedidos,
+                    height=300,
+                    bgcolor="#1E1E1E",
+                    border_radius=10,
+                    padding=10,
+                    expand=True
+                ),
+                ft.Divider(),
+                ft.Text("Ingresos/Egresos Manuales:", size=22, weight=ft.FontWeight.BOLD, color="#E71790"),
+                cantidad_movimiento,
+                descripcion_movimiento,
+                ayuda_movimiento,
+                ft.Row([
+                    ft.ElevatedButton("Registrar Ingreso", on_click=lambda e: confirmar_movimiento(1), bgcolor="blue", color="white"),
+                    ft.ElevatedButton("Registrar Egreso", on_click=lambda e: confirmar_movimiento(-1), bgcolor="red", color="white")
+                ], spacing=20),
+                ft.ElevatedButton("Volver", on_click=mostrar_inicio, bgcolor="#5D0E41", color="white")
+            ], spacing=15, expand=True, scroll=ft.ScrollMode.ALWAYS)
         )
 
 
 
-
-
-
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -990,5 +1033,13 @@ def main(page: ft.Page, nombre_usuario=None, tipo_usuario=None):
         bgcolor="#5D0E41"
     )
     mostrar_inicio()
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--username", help="Nombre de usuario para la sesión")
+    parser.add_argument("--tipo", help="Tipo de usuario (Empleado o Cliente")
+    args = parser.parse_args()
 
 ft.app(target=main)
